@@ -62,31 +62,31 @@ p2p 통신을 위해 서버 측은 먼저 `NetworkManager.CreateServer` 함수�
 ``` c#
   // Loading() Coroutine
   private IEnumerator Loading() {
-     String         opponent = NetworkManager.isServer ? "<strong>클라이언트</strong>" : "<strong>서버</strong>";
+     String         opponent = NetworkManager.isServer ? "클라이언트" : "서버";
      String         postfix  = String.Empty;
      String         prefix   = NetworkManager.isServer ? NetworkManager.hostIP : String.Empty;
      WaitForSeconds delay    = new WaitForSeconds(0.2f);
 
      String[] reason = new String[] {
-        "<strong>연결이 종료되었습니다</strong>",
-        "<strong>방이 가득찼습니다</strong>",
-        "<strong>서버를 찾을 수 없었습니다</strong>",
-        "<strong>연결시간이 초과되었습니다</strong>",
-       $"{opponent}<strong>로부터 응답이 없습니다</strong>"
+        "연결이 종료되었습니다",
+        "방이 가득찼습니다",
+        "서버를 찾을 수 없었습니다",
+        "연결시간이 초과되었습니다",
+       $"{opponent}로부터 응답이 없습니다"
      };
 
      while(true) {
          switch(NetworkManager.status) {
               case SocketStatus.NotConnected: {
-                 output.text = $"{prefix}\n{opponent}<strong>를 찾는 중입니다</strong>{postfix}";
+                 output.text = $"{prefix}\n{opponent}를 찾는 중입니다{postfix}";
                  break;
               }
               case SocketStatus.Connecting: {
-                 output.text = $"{prefix}\n{opponent}<strong>를 찾았습니다!</strong>{postfix}";
+                 output.text = $"{prefix}\n{opponent}를 찾았습니다!{postfix}";
                  break;
               }
               case SocketStatus.Connected: {
-                 output.text = $"{prefix}\n{opponent}<strong>와 연결되었습니다</strong>";
+                 output.text = $"{prefix}\n{opponent}와 연결되었습니다";
                  InitGame(); // 이 함수는 후술합니다.
                  yield break;
               }
