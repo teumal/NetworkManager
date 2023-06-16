@@ -1,0 +1,3352 @@
+<!DOCTYPE html>
+<html lang="kor">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetworkManager</title>
+    <style>
+        body {
+            padding:30px;
+            padding-right:30px;
+            overflow:scroll;
+            width:1800px;
+        }
+        * {
+            font-family: DejaVuSans,"DejaVu Sans",arial,sans-serif;
+            text-overflow:ellipsis;
+        }
+        h1 {
+            color:black;
+            width:100%;
+            border-bottom: 1px solid #aaa;
+        }
+        div {
+            padding-top:10px;
+            padding-bottom:10px;
+            font-size: 25px;
+            border-bottom: 1px solid #aaa;
+            border-top: 1px solid #aaa;
+        }
+        .kw1 {
+            color:#0000dd;
+        }
+        .kw2 {
+            color:rgb(42, 152, 115);
+        }
+        .kw3 {
+            color:#b224b7;
+        }
+        .kw4 {
+            color:#d48e39;
+        }
+        .code {
+            color:hsl(210, 8%, 15%);
+            padding: 4px 6px;
+            border-radius: 3px;
+            background-color: hsl(210, 8%, 90%);
+            font-family:ui-monospace,"Cascadia Mono","Segoe UI Mono","Liberation Mono",Menlo,Monaco,Consolas,monospace;
+        }
+        pre {
+            margin-left: 60px;
+            overflow:scroll;
+            text-overflow:clip;
+            width:1000px;
+            height:500px;
+        }
+        code {
+            padding:20px; 
+            font-size: 20px;
+            font-family:ui-monospace,"Cascadia Mono","Segoe UI Mono","Liberation Mono",Menlo,Monaco,Consolas,monospace;
+        }
+        p {
+            font-size:20px;
+        }
+        .tr {
+            border-top: 1px solid #aaa;
+            box-sizing: border-box;
+            font-size: 25px;
+        }
+        a {
+            text-decoration:none; 
+            font-weight:bold;
+            color:#0b47ad;
+        }
+        li {
+            margin-left:30px;
+            font-size:20px;
+            padding-top:20px;
+        }
+        ul {
+            margin-top:0px;
+        }
+        strong {
+            color:rgb(69, 84, 99);
+        }
+    </style>
+</head>
+<body>
+    <h1 style="padding-left:30px">NetworkManager</h1>
+    <table>
+        <tr>
+            <td style="padding-left:30px">
+                Defined in <span class="kw1">NetworkManager.cs</span>
+            </td>
+        </tr>
+        <tr>
+            <td>
+               <div>
+                  <span class="kw1">public class</span>
+                  <span class="kw2">NetworkManager</span>
+                  <span>:</span>
+                  <span class="kw2">MonoBehaviour</span>
+                  ;
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p>
+        Class 
+        <span class="code">NetworkManager</span> 
+        는 2인용 p2p 통신을 위해 디자인된 script component 입니다. 
+        <span class="code">NetworkManager</span>
+        의 인스턴스는 프로그램에서 단 하나만 존재할 수 있으며,
+    </p>
+
+    <p>
+        해당 인스턴스의 초기화는 
+        <span class="code">Awake()</span>
+        에서 이루어집니다. 다른 
+        <span class="code">MonoBehaviour</span>
+        객체에서 
+        <span class="code">NetworkManager</span>
+        의 Method 또는 Property 들을 사용하고자 한다면,
+    </p>
+
+    <p>
+        <span class="code">Start()</span>
+        이후 단계에서 사용하는 것이 안전합니다.
+        <span class="code">GameObject</span>
+        에 부착한 
+        <span class="code">NetworkManager</span>
+        script component 는 
+        <span class="code">DontDestroyOnLoad(gameObject)</span>
+        를
+    </p>
+
+    <p>
+        통해 프로그램이 종료될 때까지 파괴되지 않습니다.
+        만약, 해당 컴포넌트가 여러 
+        <span class="code">GameObject</span>
+        에 부착되어 있다면 하나를 제외한 나머지는 모두
+        <span class="code">Destroy(gameObject)</span>
+        됩니다.
+    </p>
+
+    <br>
+
+    <p>
+        또한, 
+        <span class="code">NetworkManager</span>
+        는 프레임 동기화(frame synchronization, LockStep) 기법을 사용하여
+        서버와 클라이언트가 항상 같은 프레임 번호를 유지하도록 해줍니다.
+        이러한 특징은 서버와
+    </p>
+
+    <p>
+        클라이언트가 랙(lag) 또는 컴퓨터 성능으로 인해 
+        <span class="code">Update()</span>
+        의 호출 횟수 및 호출 간격이 서로 달라지는 것을 방지할 수 있습니다.
+        하지만, 이전 프레임이 끝날때까지 기다리는 과정은, 
+    </p>
+
+
+    <p>
+        사용자가
+        <span class="code">WaitForSeconds()</span>
+        와 같이 주어진 시간 만큼 코루틴 실행을
+        중지시키는 함수들을 사용하는 것으로, 서버와 클라이언트에서 똑같은 결과를
+        얻기 힘들다는 의미이기도 합니다.
+    </p>
+
+    <p>
+        주어진 시간 동안 기다리도록
+        만들고 싶다면, 대신 
+        <span class="code">NetworkManager.deltaTime</span>
+        또는 
+        <span class="code">NetworkManager.fixedDeltaTime</span>
+        을 사용하여 시간 측정을 할 수 있습니다.
+    </p>
+
+    <p>
+        자세한 내용은 
+        <a href="#property4">NetworkManager.deltaTime</a>
+        과
+        <a href="#property5">NetworkManager.fixedDeltaTime</a>
+        을 참고하시길 바랍니다.
+    </p>
+
+    <br>
+
+    <p>
+        <span class="code">NetworkManager</span>
+        의 메소드와 프로퍼티는 모두 
+        <span class="code">static</span>
+        입니다. 이는 프로그램에서 인스턴스가 단 하나만 존재하기 때문이며,
+        <span class="code">NetworkManager.Inst.hostIP</span>
+        와 같이 접근할 것을
+    </p>
+
+    <p>
+        <span class="code">NetworkManager.hostIP</span>
+        처럼 인스턴스에 접근하는 과정을 생략함으로써, 사용자에게 편리함을
+        주기 위함입니다. 또한, 일부 메소드와 프로퍼티들은 
+        thread-safe 하지 않다는 점에
+    </p>
+    
+    <p>
+        유의하시길 바랍니다. 즉, 메인 스레드(Main Thread) 이외의 스레드에서
+        사용하는 것은 <b>Undefined Behaviour</b>
+        입니다. thread-safe 하지 않은 메소드 및 프로퍼티들은 이후에 있을
+    </p>
+
+    <p>
+        설명에서 언급하오니 참고하시길 바랍니다.
+    </p>
+
+    <br>
+
+    <p>
+        <span class="code">NetworkManager</span>
+        는 게임의 물리(Physics)와 로직(Logic) 업데이트 과정이 최대한 deterministic 하게 되도록 돕습니다. 이를 위해
+        <span class="code">NetworkManager.deltaTime</span>,
+    </p>
+
+    <p>
+        <span class="code">NetworkManager.fixedDeltaTime</span>
+        의 값은 한번 초기화된 이후 절대 변하지 않음을 보장하며,
+        <span class="code">onReadMessage</span>
+        가 이전 프레임에서 보낸 메시지를 읽는 것으로
+    </p>
+    
+    <p>
+        이전 프레임에서 게임 오브젝트(GameObject)들의 상태가 서버, 클라이언트 측 모두
+        같을 수 있도록 해줍니다. 또한, 물리(Physics)의 경우
+        기존의 물리시뮬레이션을
+    </p>
+
+    <p>
+        <span class="code">Physics2D.SimulationMode = SimulationMode2D.Script</span>
+        를 통해 중지시키고, 
+        <span class="code">NetworkManager.fixedDeltaTime</span>
+        을 사용하여 직접 물리 주기를 스케쥴링합니다.
+    </p>
+
+    <p>
+        그렇기 때문에, 동기화되어야할 내용들은
+        <span class="code">FixedUpdate()</span>
+        을 사용해야 한다면, 대신 
+        <span class="code">NetworkManager.onFixedUpdate</span>
+        대리자(delegate)에 등록하여 사용하시길 바랍니다.
+    </p>
+
+    <br>
+    <br>
+    <p>
+        사용자는 통신하는 장치가  똑같은 플랫폼(e.g. PC)이고, 똑같은 아키텍처(e.g. x86-64)를 사용하는 등
+        , 게임로직과 물리가 deterministic 할 가능성이 상당히 높다고 판단된다면
+    </p>
+
+    <p>
+        단순히 사용자의 입력(Input)과 의사 난수 생성기(Pesudo-random number generator)에서 사용할
+        시드(Seed) 값만을 보내는 것으로 상당한 동기화가 가능할 수도 있습니다.
+    </p>
+
+    <p>
+        다만, 이것은 너무 이상적(Ideal)이며, 실제로는 부동소수점 오차 또는 deterministic 하지 않은
+        유니티의 물리시뮬레이션 등으로 인해 실패할 가능성을 생각해 봐야 합니다.
+    </p>
+
+    <p>
+        이식성을 위해, 일반적으로 서버가 시뮬레이션한 결과를 클라이언트에게 보내주는 방법을 생각할 수 있습니다.
+    </p>
+
+    <br><br>
+    <p>
+        또한, 본 문서에서 "보장" 이라는 말은 이론적인 보장을 의미하며, 여기에는 부동소수점 오차가 고려되어
+        있지 않습니다. 예를 들어, <span class="code">NetworkManager.fixedDeltaTime</span>
+        을
+    </p>
+
+    <p>
+        이용한 시간 측정은 이론적으로는 결과가 같음을 보장하지만
+        다른 아키텍처에서는 그 결과가 다를 수도 있다는 의미입니다.
+        물론, IEEE 산술 표준을 사용하는 두 기계 사이에서는
+    </p>
+
+    <p>
+        덧셈, 뺄셈, 곱셈, 나눗셈 등이 똑같은 결과를 내도록 표준안이 정해져있으며(이식성을 위해, 하지만 이것이 초월함수(e.g. 삼각함수) 등
+        모든 연산에 대해서 정해진 것은 아닙니다)
+    </p>
+
+    <p>
+        <span class="code">NetworkManager.fixedDeltaTime</span>
+        을 이용한 시간 측정은 덧셈과 뺄셈을 사용하여 이루어지긴 합니다만, 충분히 고려해봐야 하는 부분임에 유의해야합니다.
+    </p>
+
+    <br><br>
+
+    <br>
+    <br>
+    <h1 id="s2" style="padding-left:30px">Order of execution of event functions</h1>
+    <img width="1600" src="./the-order-of-execution-of-event-function.jpg">
+
+    <p>
+      위 그림은 한 프레임에서
+      <span class="code">NetworkManager</span>
+      의 이벤트 함수들이 어떤 순서로 진행되는지를 나타낸 플로우차트(flowchart)입니다.
+      상대방이 보낸 메시지를 어느 시점에서 
+    </p>
+
+    <p>
+      읽고 처리하는지, 
+      <span class="code">NetworkManager</span> 
+      에 등록한 콜백함수들의 호출 순서는 어떤지에 대해 정리되어 있습니다.
+      위 플로우 차트(flowchart)에서 <span class="code">Update()</span>단계와
+    </p>
+
+    <p>
+        <span class="code">yield WaitForEndOfFrame</span>
+        단계는 
+        <span class="code">NetworkManager.status == SocketStatus.Connected</span>
+        일 때에만 진행됨에 주목하시길 바랍니다. 
+        <span class="code">NetworkManager</span>
+        는 
+    </p>
+
+    <p>
+        는 이를 위해 
+        <span class="code">NetworkManager.status</span>
+        속성의 값을 thread-safe 하게 세팅합니다. 정확하게는 항상
+        <span class="code">Update()</span>
+        단계에서 이루어지며, 위 플로우차트에서는 나타나지 않았지만,
+    </p>
+
+    <p>
+        <span class="code">EnterUpdate</span>
+        이전의 숨겨진 단계에서 진행됩니다.
+        또한, <a href="#property2">status</a>를 읽어보시길 바랍니다.
+    </p>
+
+    <br>
+    <p>
+        본 문서에서 "첫 번째" 프레임이라는 단어는 
+        <span class="code">NetworkManager.status</span>
+        가 
+        <span class="code">SocketStatus.Connected</span>
+        로 세팅된 프레임을 의미함을 알아두시길 바랍니다. 
+        위 속성의 값이
+    </p>
+    
+    <p>
+        세팅되는 것은 항상 
+        <span class="code">Update()</span>
+        단계에서 진행되므로, "첫 번째" 프레임부터
+        <span class="code">onFixedUpdate</span>,
+        <span class="code">onUpdate</span>
+        에 등록한 콜백함수들이 호출된다는 것이며
+
+    </p>
+
+    <p>
+        <span class="code">Update</span>
+        이후에 있는
+        <span class="code">yield null</span>,
+        <span class="code">LateUpdate</span>
+        등의 단계에서
+        <span class="code">if(NetworkManager.status == SocketStatus.Connected)</span>
+        를 조건으로 한 수식들이 모두 빠짐없이 
+    </p>
+
+    <p>
+        <span class="code">true</span>
+        로 평가됩니다. 물론, 이는 
+        <span class="code">NetworkManager.status</span>
+        가 
+        <span class="code">NotConnected</span>,
+        <span class="code">Connecting</span>,
+        <span class="code">Closed</span>,
+        로 세팅될 때에도 마찬가지입니다.
+    </p>
+
+    <br><br>
+    <h1 id="s4" style="border-bottom:none; margin-bottom: 0;">Awake()</h1>
+    <ul>
+        <li>
+            <strong>Initialization:</strong>
+            <span class="code">NetworkManager</span>
+            의 인스턴스를 초기화합니다. 
+            해당 script component 를 부착한 
+            <span class="code">GameObject</span>
+            에 대해서 최초 한번만 실행됩니다.  다만,<p>
+            
+            인스턴스의 갯수는 프로그램에서 단 하나만 존재할 수 있기에, 첫번째 
+            <span class="code">Awake()</span>
+            이후에는 새로 생성된 인스턴스를 모두 
+            <span class="code">Destroy(gameObject)</span>
+            합니다. 
+        </li>
+    </ul>
+
+    <h1 id="s4" style="border-bottom:none; margin-bottom: 0;">Update()</h1>
+    <ul>
+        <li>
+            <strong>EnterUpdate:</strong>
+            서버와 클라이언트 측이 다음 프레임으로 넘어갈 수 있는지 검사를 진행합니다.
+            서버와 클라이언트 둘다 이전 프레임을 마치지 않았다면, <p>
+
+            메인 스레드는 블로킹(blocking)됩니다. 비록 메인 스레드가 블로킹되었더라도,
+            상대 측으로부터 메시지가 도착하면 다른 스레드에서 알아서 깨워줍니다. <p>
+
+            또한 서버와 클라이언트의 연결이 끊겼을 때에도, 잠든 메인 스레드를 자동으로
+            깨워줌에 주목하시길 바랍니다. 해당 단계는 "첫 번째" 프레임에서는 무시됩니다. <p>
+
+            이는 당연한데, 서버와 클라이언트가 연결되고 나서 진행되는 "첫 번째" 프레임에서는
+            서로 메시지를 보낸 적이 없기 때문입니다.
+        </li>
+
+        <li>
+            <strong>onReadMessage:</strong>
+            상대방이 이전 프레임에서 보낸 메시지를 읽고 처리합니다. 이를 위해
+            <span class="code">NetworkManager</span>
+            는 이 단계에서 상대방이 보낸 메시지들을<p>
+                
+            내부 메시지 큐(message queue)에서 받은 순서대로 꺼내어
+            해석합니다. 이때 해석은 
+            <a href="#property9">onReadMessage</a>
+            대리자(delegate)를 호출하는 것으로 진행됩니다. <p>
+
+            만약 <span class="code">onReadMessage == null</span>
+            이라면, 해당 단계에서 읽은 메시지들은 무시되고 폐기됩니다(ignored and discarded).
+            해당 단계는 "첫 번째" 프레임 <p>
+
+            에서는 무시됩니다. 이는 당연한데, 서버와 클라이언트가 연결되고 나서 진행되는
+            "첫 번째" 프레임에서는 서로 메시지를 보낸 적이 없기 때문입니다.
+        </li>
+
+        <li>
+            <strong>onFixedUpdate:</strong>
+            물리 시뮬레이션 이전에 호출되어야할 함수들을 호출합니다.
+            기존의 
+            <span class="code">FixedUpdate</span>
+            처럼 해당 단계는 한 프레임에서 0번 이상 진행될 수 있습니다. <p>
+
+            하지만, 
+            <span class="code">FixedUpdate</span>
+            과는 달리 호출 주기가 랙(lag)이나 프레임 동기화로 인한 지연시간의
+            영향을 받지 않습니다. 그러므로, 해당 단계는 서버와 클라이언트 모두 <p>
+
+            똑같은 간격과 횟수만큼 호출된다고 생각할 수 있습니다.
+            <span class="code">NetworkManager.onFixedUpdate</span>
+            delegate를 통해 진행되기 때문에, 콜백함수들 간의 호출순서를 보장합니다. <p>
+            또한, <a href="#property8">onFixedUpdate</a>와 
+            <a href="#property5">fixedDeltaTime</a>를 읽어보시길 바랍니다.
+        </li>
+
+        <li>
+            <strong>Simulate:</strong>
+            물리 시뮬레이션을 진행합니다. 이 단계는 
+            <span class="code">Physics2D.Simulate()</span>
+            함수를 통해 이루어집니다. 
+            이전 단계인 
+            <span class="code">onFixedUpdate</span>
+            단계와 해당 단계를 합쳐서 <p>
+
+            하나의 물리(Physics) 단계로 볼 수 있으며, 
+            이 물리(Physics) 단계는
+            <span class="code">NetworkManager</span>
+            에 의해 0번 이상 호출되도록 스케쥴링됩니다.
+            호출 주기는 Project Setting 의 <p>
+
+            <span class="code">Fixed Timestamp</span>
+            값을 따릅니다.
+        </li>
+
+        <li>
+            <strong>onUpdate:</strong>
+            물리 시뮬레이션 이후에 호출되어야할 함수들을 호출합니다.
+            해당 단계는 기존의
+            <span class="code">Update</span>
+            처럼 한 프레임에 한번만 호출됩니다. 
+            <span class="code">NetworkManager.onUpdate</span><p>
+            delegate를 통해 진행되기 때문에, 콜백함수들 간의 호출순서를 보장합니다. 
+            또한 <a href="#property4">deltaTime</a> 와
+            <a href="#property7">onUpdate</a>
+            를 읽어보시길 바랍니다.
+        </li>
+    </ul>
+
+
+    <h1 id="s4" style="border-bottom:none; margin-bottom: 0;">yield WaitForEndOfFrame</h1>
+    <ul>
+        <li>
+            <strong>EndOfFrame:</strong>
+            현 프레임이 끝났음을 알리는 메시지를 내부 송신버퍼의 끝에 덧붙입니다. 
+            해당 메시지 덕분에, 서로의 
+            <span class="code">NetworkManager</span>는 <p>
+
+            사용자가 
+            <span class="code">NetworkManager.SendMessage()</span>
+            를 호출하지 않더라도, 프레임이 끝났음을 항상 인지할 수 있습니다. 이것이
+            매 프레임 마다 최소 한 번은  <p>
+
+            서로 메시지 교환이 이루어짐임에 주목하시길 바랍니다. 사용자 메시지로 인해
+            송신 버퍼의 공간이 부족할 경우, 두 번 이상의 메시지 전송이 필요할 수 있습니다.
+        </li>
+
+        <li>
+            <strong>FlushSendBuffer:</strong>
+            송신 버퍼에 쌓여있는 메시지들을 한꺼번에 전송(=방출)합니다.
+            <span class="code">NetworkManager.SendMessage()</span>
+            로 보낸 메시지들은 내부 송신 버퍼에 <p>
+                
+            순서대로 쌓이며, 해당 단계에서
+            하나의 커다란 메시지로 취급하여 한번에 전송합니다. 이는 메시지 전송 횟수를 최소로 할 수 있도록
+            도와줍니다. 
+
+        </li>
+    </ul>
+
+    <br><br>
+    <br>
+    <br>
+
+    <h1 id="s3" style="padding-left:30px; border-bottom:none; margin-bottom:5px">Methods</h1>
+    <table style="border-collapse:collapse;">
+      <tr class="tr">
+        <td style="padding:20px;">
+            <a href="#method0">CreateServer</a>
+        </td>
+        <td style="font-size: 22px">
+            클라이언트의 접속을 대기하는 서버 소켓을 생성합니다.
+        </td>
+      </tr>
+
+      <tr class="tr">
+        <td style="padding:20px;">
+            <a href="#method1">CreateClient</a>
+        </td>
+        <td style="font-size: 22px">
+            서버로 연결을 요청하는 클라이언트 소켓을 생성합니다.
+        </td>
+      </tr>
+
+      <tr class="tr">
+        <td style="padding:20px;">
+            <a href="#method2">Close</a>
+        </td>
+        <td style="font-size: 22px">
+            생성된 소켓을 닫고, 관련된 모든 자원을 해제합니다.
+        </td>
+      </tr>
+
+      <tr class="tr">
+        <td style="padding:20px;">
+            <a href="#method3">SendMessage</a>
+        </td>
+        <td style="font-size: 22px">
+            상대방에게 
+            <span class="kw1">byte</span>[] 형식의 메시지를 전송합니다.
+        </td>
+      </tr>
+
+      <tr class="tr">
+        <td style="padding:20px;">
+            <a href="#method4">Host2Network</a>
+        </td>
+        <td style="font-size: 22px">
+            보낼
+            <span class="kw1">byte</span>[] 타입의 메시지 일부분의 바이트 순서(Byte order)를
+            네트워크(Network)의 바이트 순서(Byte order)로 바꿉니다.
+        </td>
+      </tr>
+
+      <tr class="tr">
+        <td style="padding:20px;">
+            <a href="#method5">Network2Host</a>
+        </td>
+        <td style="font-size: 22px">
+            받은
+            <span class="kw1">byte</span>[] 타입의 메시지 일부분의 바이트 순서(Byte order)를
+            호스트(Host)의 바이트 순서(Byte order)로 바꿉니다.
+        </td>
+      </tr>
+    </table>
+
+    <br>
+    <br>
+    <h1 id="s4" style="padding-left:30px; border-bottom:none">Properties</h1>
+    <table style="border-collapse:collapse;">
+        <tr class="tr">
+            <td style="padding:20px;">
+                <a href="#property0">hostIP</a>
+            </td>
+            <td style="font-size: 22px">
+                호스트의 아이피를 나타내는 
+                <span class="kw1">String</span>
+                을 얻습니다.
+            </td>
+        </tr>
+
+        <tr class="tr">
+            <td style="padding:20px;">
+                <a href="#property10">port</a>
+            </td>
+            <td style="font-size: 22px">
+                서버의 포트번호를 나타내는
+                <span class="kw1">int</span>
+                값입니다.
+            </td>
+        </tr>
+
+        <tr class="tr">
+            <td style="padding:20px;">
+                <a href="#property1">isServer</a>
+            </td>
+            <td style="font-size: 22px">
+                생성된 소켓이 서버 소켓인지 여부를 나타내는
+                <span class="kw1">bool</span>
+                값입니다.
+            </td>
+        </tr>
+
+        <tr class="tr">
+            <td style="padding:20px;">
+                <a href="#property2">status</a>
+            </td>
+            <td style="font-size: 22px">
+                현재 소켓의 상태를 나타내는 
+                <span class="kw2">SocketStatus</span>
+                열거형 값을 얻습니다.
+            </td>
+        </tr>
+
+
+        <tr class="tr">
+            <td style="padding:20px;">
+                <a href="#property3">exitCode</a>
+            </td>
+            <td style="font-size: 22px">
+                소켓이 닫힌 경우, 종료된 원인을 나타내는
+                <span class="kw2">SocketExitCode</span>
+                열거형을 값을 얻습니다.
+            </td>
+        </tr>
+
+        <tr class="tr">
+            <td style="padding:20px;">
+                <a href="#property4">deltaTime</a>
+            </td>
+            <td style="font-size: 22px">
+                서버와 클라이언트 최초 연결 시에 동기화된 초당 프레임 속도(FPS)를 나타내는
+                <span class="kw1">float</span>
+                값을 얻습니다.
+            </td>
+        </tr>
+
+        <tr class="tr">
+            <td style="padding:20px;">
+                <a href="#property5">fixedDeltaTime</a>
+            </td>
+            <td style="font-size: 22px">
+                <span class="kw2">NetworkManager</span>
+                의 물리 시뮬레이션 주기를 나타내는
+                <span class="kw1">float</span>
+                값을 얻습니다.
+            </td>
+        </tr>
+
+        <tr class="tr">
+            <td style="padding:20px;">
+                <a href="#property6">latency</a>
+            </td>
+            <td style="font-size: 22px">
+                서버와 클라이언트 최초 연결 시에, 측정된 네트워크 지연시간의 평균 값을 나타내는
+                <span class="kw1">double</span>
+                값을 얻습니다.
+            </td>
+        </tr>
+
+        <tr class="tr">
+            <td style="padding:20px;">
+                <a href="#property7">onUpdate</a>
+            </td>
+            <td style="font-size: 22px">
+                <span class="kw1">Update</span>() 단계에서 호출되어야하는 함수들 중, 동기화되어야 하는
+                함수들을 등록하는 <span class="kw1">delegate</span> 입니다.
+            </td>
+        </tr>
+
+        <tr class="tr">
+            <td style="padding:20px;">
+                <a href="#property8">onFixedUpdate</a>
+            </td>
+            <td style="font-size: 22px">
+                <span class="kw1">FixedUpdate</span>() 단계에서 호출되어야하는 함수들 중, 동기화되어야 하는
+                함수들을 등록하는 <span class="kw1">delegate</span> 입니다.
+            </td>
+        </tr>
+
+        <tr class="tr">
+            <td style="padding:20px;">
+                <a href="#property9">onReadMessage</a>
+            </td>
+            <td style="font-size: 22px">
+                받은 메시지 하나를 처리하기 위해 호출되어야 하는 함수들을 등록하는 
+                <span class="kw1">delegate</span> 입니다.
+            </td>
+        </tr>
+    </table>
+
+    <br>
+    <br>
+    <br>
+    <br><br>
+    <br>
+
+    <h1 style="padding-left:30px" id="method0">NetworkManager.CreateServer</h1>
+    <table>
+        <tr>
+            <td style="padding-left:40px;">
+               <div>
+                  <span class="kw1">public static bool</span>
+                  CreateServer( );
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p style="padding-left:40px;"> 
+      <span class="code">IPv4:NetworkManager.port</span>
+      을 엔드 포인트(local endpoint)로 하는 서버 소켓을 생성합니다.
+      또한, 스레드를 하나 생성하여 비동기적(Asynchronously)으로 클라이언트의
+    </p>
+
+    <p style="padding-left:40px;">
+        연결 요청을 대기합니다. 해당 함수가 성공적으로 종료되면 
+        <span class="code">true</span>
+        를 반환하며, 이 시점에서 
+        <span class="code">NetworkManager.isServer</span>, 
+        <span class="code">NetworkManager.hostIP</span>
+    </p>
+
+    <p style="padding-left:40px;">
+        가 유효해지며, 
+        <span class="code">NetworkManager.status</span>
+        의 값이 
+        <span class="code">SocketStatus.NotConnected</span>
+        로 세팅됩니다. 만약 IPv4 주소를 사용할 수 없거나, 
+    </p>
+
+    <p style="padding-left:40px;">
+        포트(port)가 이미 사용 중이라는 등등, 문제가 생긴다면 해당 함수는
+        <span class="code">false</span>
+        를 반환하며 이 과정에서 생성되었던 모든 자원을 해제합니다.
+    </p>
+
+    <p style="padding-left:40px;">
+        또한 이미 소켓이 생성되었거나, 
+        <span class="code">NetworkManager</span>
+        의 인스턴스가 생성되지 않았을 경우에도 마찬가지로 해당 함수는
+        <span class="code">false</span>를 반환하지만, 이 경우
+    </p>
+
+    <p style="padding-left:40px;">
+        이것이 이미 생성된 소켓 또는 스레드의 자원을 해제시키는 것을 의미하지는 않습니다.
+    </p>
+
+    <br>
+    <p style="padding-left:40px;">
+        해당 함수는 thread-safe 하지 않습니다. 즉, 메인 스레드 이외의 스레드에서 이 함수를 호출하는 것은
+        <b>Undefined behaviour</b> 입니다. 
+    </p>
+
+    <p style="padding-left:40px;">
+        또한, 
+        <a href="#property0">hostIP</a>
+        와
+        <a href="#property10">port</a>
+        도 읽어보시길 바랍니다.
+    </p>
+
+    <br>
+    <h1 style="padding-left:60px; border-bottom:none">Parameters</h1>
+    <table>
+        <tr><td style="padding-left:80px; font-size:20px">
+          (none)
+        </td></tr>
+    </table>
+
+    <h1 style="padding-left:60px; border-bottom:none">Return value</h1>
+    <table>
+        <tr><td style="padding-left:80px; font-size:20px">
+          서버 소켓이 성공적으로 생성되었으면 
+          <span class="code">true</span>
+          , 이외의 경우 
+          <span class="code">false</span>. 
+        </td></tr>
+    </table>
+
+    <h1 style="padding-left:60px; border-bottom:none">Example</h1>
+    
+    <pre  class="code">
+        <code>
+            public class Example : MonoBehaviour, IPointerClickHandler {
+   
+                Text result;
+                
+                private void Awake() {
+                    result = GetComponent&lt;Text&gt;();
+                }
+                
+                private void OnPointerClick(PointerEventData e) {
+                    GameObject clicked = e.pointerCurrentRaycast.gameObject;
+                
+                    if(clicked.name=="Host") {
+                        if(NetworkManager.CreateServer()) {
+                            result.text = "<strong>서버가 생성되었습니다</strong>";
+                            return;
+                        }
+                        result.text = "<strong>서버 생성에 실패하였습니다</strong>";
+                    }
+                }
+            };
+        </code>
+    </pre>
+
+    <br><br><br><br>
+
+    <h1 style="padding-left:30px" id="method1">NetworkManager.CreateClient</h1>
+    <table>
+        <tr>
+            <td style="padding-left:40px;">
+               <div>
+                  <span class="kw1">public static bool</span>
+                  CreateClient( 
+                  <span class="kw1">String</span> hostIP );
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p style="padding-left:40px;"> 
+        <span class="code">hostIP:NetworkManager.port</span>
+        을 엔드 포인트(remote endpoint)로 하는 클라이언트 소켓을 생성합니다.
+        또한, 스레드를 하나 생성하여 비동기적(Asynchronously)으로 호스트에게 
+    </p>
+
+    <p style="padding-left:40px;">
+        연결을 요청합니다. 해당 함수가 성공적으로 종료되면
+        <span class="code">true</span>
+        를 반환하며, 이 시점에서 
+        <span class="code">NetworkManager.isServer</span>,
+        <span class="code">NetworkMaanger.hostIP</span>
+    </p>
+
+    <p style="padding-left:40px;">
+        가 유효해지며, 
+        <span class="code">NetworkManager.status</span>
+        의 값이 
+        <span class="code">SocketStatus.NotConnected</span>
+        로 세팅됩니다. 만약 주어진 호스트 아이피가 
+        <span class="code">null</span> 
+        이거나, 
+    </p>
+
+    <p style="padding-left:40px;">
+        잘못된 값을 나타내고 있는 등, 문제가 생긴다면 해당 함수는
+        <span class="code">false</span>
+        를 반환하며 이 과정에서 생성되었던 모든 자원을 해제합니다.
+    </p>
+
+    <p style="padding-left:40px;">
+        또한 이미 소켓이 생성되었거나, 
+        <span class="code">NetworkManager</span>
+        의 인스턴스가 생성되지 않았을 경우에도 마찬가지로 해당 함수는
+        <span class="code">false</span>를 반환하지만, 이 경우
+    </p>
+
+    <p style="padding-left:40px;">
+        이것이 이미 생성된 소켓 또는 스레드의 자원을 해제시키는 것을 의미하지는 않습니다.
+    </p>
+
+    <br>
+    <p style="padding-left:40px;">
+        해당 함수는 thread-safe 하지 않습니다. 즉, 메인 스레드 이외의 스레드에서 이 함수를 호출하는 것은
+        <b>Undefined behaviour</b> 입니다. 
+    </p>
+
+    <p style="padding-left:40px;">
+        또한, 
+        <a href="#property0">hostIP</a>
+        와
+        <a href="#property10">port</a>
+        도 읽어보시길 바랍니다.
+    </p>
+
+    <br>
+    <h1 style="padding-left:60px; border-bottom:none">Parameters</h1>
+    <table>
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              hostIP
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                <p>
+                    호스트의 Ipv4 주소를 나타내는 
+                    <span class="code">String</span>.
+                    문자열에 Port 를 입력할 필요는 없으며, 일반적으로 서버 측에서 
+                    <span class="code">NetworkManager.CreateServer</span>
+                </p>
+                <p>
+                    이후 사용할 수 있는 <span class="code">NetworkManager.hostIP</span>
+                    의 내용을 기대하고 있습니다.
+                </p>
+            </td>
+        </tr>
+    </table>
+
+    <h1 style="padding-left:60px; border-bottom:none">Return value</h1>
+    <table>
+        <tr><td style="padding-left:80px; font-size:20px">
+          클라이언트 소켓이 성공적으로 생성되었으면 
+          <span class="code">true</span>
+          , 이외의 경우 
+          <span class="code">false</span>. 
+        </td></tr>
+    </table>
+
+    <h1 style="padding-left:60px; border-bottom:none">Example</h1>
+
+    <pre class="code" style="height:600px">
+        <code>
+        class Example : MonoBehaviour, IPointerClickHandler {
+   
+            Text result, input;
+                
+            private void Awake() {
+                result = GetComponent&lt;Text&gt;();
+                input  = Find("InputField").Find("Text").GetComponent&lt;Text&gt;();
+            }
+                
+            private void OnPointerClick(PointerEventData e) {
+                GameObject clicked = e.pointerCurrentRaycast.gameObject;
+                
+                switch(clicked.name) {
+                    case "Host": {
+                        if(NetworkManager.CreateServer()) {
+                            result.text = "<strong>서버가 생성되었습니다</strong>";
+                            break;
+                        }
+                        result.text = "<strong>서버 생성에 실패했습니다</strong>";
+                        break;
+                    }
+                    case "Connect": {
+                        if(NetworkManager.CreateClient(input.text)) {
+                            result.text = "<strong>클라이언트가 생성되었습니다</strong>";
+                            break;
+                        }
+                        result.text = "<strong>클라이언트 생성에 실패했습니다</strong>";
+                        break;
+                    }
+                };
+            }
+        };
+        </code>
+    </pre>
+
+    <br><br><br><br>
+
+    <h1 style="padding-left:30px" id="method2">NetworkManager.Close</h1>
+    <table>
+        <tr>
+            <td style="padding-left:40px;">
+               <div>
+                  <span class="kw1">public static void</span>
+                  Close( );
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p style="padding-left:40px;"> 
+        현재 생성된 소켓을 닫습니다. 이 과정에서 서버와 클라이언트의 연결을 해제하며,
+        모든 소켓들과 스레드들의 자원을 해제합니다. 또한, 상대 측의 소켓도 연결이 자동 해제됩니다.
+    </p>
+
+    <p style="padding-left:40px;">
+        <span class="code">NetworkManager</span>
+        에서 명시적인 방법으로 연결을 해제하는 방법입니다. 이 함수 호출 후, 다음 프레임 부터
+        <span class="code">NetworkManager.status = SocketStatus.Closed</span> 상태가 되며,
+    </p>
+
+    <p style="padding-left:40px;">
+        서버와 클라이언트 둘다 종료코드는 
+        <span class="code">NetworkManager.exitCode = SocketExitCode.None</span> 입니다.
+        이는 정상적인 방법으로 네트워크 통신이 종료되었음을 의미합니다.
+    </p>
+
+    <p style="padding-left:40px;">
+        해당 함수는 
+        <span class="code">OnApplicationQuit()</span>
+        이 호출될 시점에서 자동 호출됩니다. 만약, 
+        <span class="code">NetworkManager</span>
+        의 인스턴스가 생성되지 않았거나, 이미 소켓이 닫힌 상태라면
+    </p>
+
+    <p style="padding-left:40px;">
+        아무 일도 일어나지 않으며, 호출 즉시 종료됩니다.
+    </p>
+
+    <br>
+    <p style="padding-left:40px;">
+        해당 함수는 thread-safe 하지 않습니다. 즉, 메인 스레드 이외의 스레드에서 이 함수를 호출하는 것은
+        <b>Undefined behaviour</b> 입니다. 
+    </p>
+
+    <br>
+    <h1 style="padding-left:60px; border-bottom:none">Parameters</h1>
+    <table>
+        <tr><td style="padding-left:80px; font-size:20px">
+          (none)
+        </td></tr>
+    </table>
+
+    <h1 style="padding-left:60px; border-bottom:none">Return value</h1>
+    <table>
+        <tr><td style="padding-left:80px; font-size:20px">
+            (none)
+        </td></tr>
+    </table>
+
+    <h1 style="padding-left:60px; border-bottom:none">Example</h1>
+
+    <pre class="code" style="height:800px">
+        <code>
+        class Example : MonoBehaviour, IPointerClickHandler {
+   
+            Text result, input;
+                
+            private void Awake() {
+                result = GetComponent&lt;Text&gt;();
+                input  = Find("InputField").Find("Text").GetComponent&lt;Text&gt;();
+            }
+                
+            private void OnPointerClick(PointerEventData e) {
+                GameObject clicked = e.pointerCurrentRaycast.gameObject;
+                
+                switch(clicked.name) {
+                    case "Host": {
+                        if(NetworkManager.CreateServer()) {
+                            result.text = "<strong>서버가 생성되었습니다</strong>";
+                            break;
+                        }
+                        result.text = "<strong>서버 생성에 실패했습니다</strong>";
+                        break;
+                    }
+                        
+                    case "Connect": {
+                        if(NetworkManager.CreateClient(input.text)) {
+                            result.text = "<strong>클라이언트가 생성되었습니다</strong>";
+                            break;
+                        }
+                        result.text = "<strong>클라이언트 생성에 실패했습니다</strong>";
+                        break;
+                    }
+                        
+                    case "Back": {
+                        NetworkManager.Close();
+                        result.text = "<strong>소켓을 닫았습니다</strong>";
+                        break;
+                    }
+                };
+            }
+        };
+        </code>
+    </pre>
+
+    <br><br><br><br>
+
+    <h1 style="padding-left:30px" id="method3">NetworkManager.SendMessage</h1>
+    <table>
+        <tr>
+            <td style="padding-left:40px;">
+               <div>
+                  <span class="kw1">public static void</span>
+                  SendMessage( <br>
+                    <table>
+                       <tr>
+                          <td style="padding-left:40px"><span class="kw1">byte</span>[]</td>
+                          <td>msg</td>
+                       </tr>
+                          
+                       <tr>
+                        <td style="padding-left:40px"><span class="kw1">int</span></td>
+                        <td>startIndex</td>
+                       </tr>
+
+                       <tr>
+                        <td style="padding-left:40px"><span class="kw1">int</span></td>
+                        <td>length</td>
+                       </tr>
+                    </table>
+                  );
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p style="padding-left:40px;"> 
+        상대방에게 
+        <span class="code">byte[]</span> 타입의 메시지를 전송합니다. 또한,
+        해당 메소드를 호출한 즉시 상대방에게 메시지가 전달되는 것이 아니라는 점에 유의하시길 바랍니다.
+    </p>
+
+    <p style="padding-left:40px;">
+        <span class="code">NetworkManager</span> 는
+        TCP 프로토콜을 사용하여 통신을 사용하므로, 메시지 수신이 완료되기까지 핑퐁(Ping and pong)의 시간이
+        소요됩니다. 그렇기에
+        <span class="code">NetworkManager</span>
+        는 
+    </p>
+
+    <p style="padding-left:40px;">
+        전송할 메시지들을 내부적으로 송신 버퍼에 버퍼링 해두며(Buffering), 
+        <span class="code">yield WaitForEndOfFrame</span>
+        가 호출될 시점에 한번에 송신(Flush)합니다. 
+        <span class="code">NetworkManager.Update()</span>
+    </p>
+
+    <p style="padding-left:40px;">
+        에 관한 자세한 설명은 
+        <a style="font-weight:bold; text-decoration: none;" href="#s2">Order of execution of event functions</a>
+        를 참고하시길 바랍니다.
+    </p>
+
+    <br>
+
+
+    <p style="padding-left:40px;">
+       <span class="code">NetworkManager</span>
+       의 인스턴스가 초기화되지 않았거나, 
+       <span class="code">NetworkManager.status != SocketStatus.Connected</span>
+       라면 호출은 즉시 종료되고 아무 일도 일어나지 않습니다.
+    </p>
+
+    <p style="padding-left:40px;">
+        일반적으로 해당 함수는 
+        <span class="code">NetworkManager.onUpdate</span>, 
+        <span class="code">NetworkManager.onFixedUpdate</span> 또는
+        <span class="code">NetworkManager.onReadMessage</span>
+        에 등록한 콜백 함수에서
+    </p>
+
+    <p style="padding-left:40px;">
+        사용하는 것을 추천합니다.
+        이는
+        <span class="code">NetworkManager.onUpdate</span>, 
+        <span class="code">NetworkManager.onFixedUpdate</span> 또는
+        <span class="code">NetworkManager.onReadMessage</span>
+        에서 이 함수를
+    </p>
+
+    <p style="padding-left:40px;">
+        호출할 것이 아니라면, 해당 함수 호출 도중에 발생한 예외를 직접 처리해야 하기 때문입니다.
+    </p>
+      
+    <br>
+
+    <p style="padding-left:40px;">
+        해당 함수는 thread-safe 하지 않습니다. 즉, 메인 스레드 이외의 스레드에서 이 함수를 호출하는 것은
+        <b>Undefined behaviour</b> 입니다. 또한, 보낼 수 있는 메시지의 크기는
+    </p>
+
+    <p style="padding-left:40px;">
+        최대 1021 bytes 까지이며, 이후의 데이터들은 잘려서 전송되지 않습니다. 내부 송신 버퍼는 
+        1024 bytes 까지 담아둘 수 있으며, 
+        <span class="code">NetworkManager.SendMessage()</span>
+        호출 시
+    </p>
+
+    <p style="padding-left:40px;">
+        송신 버퍼의 공간이 모자르다면 버퍼를 비움으로써 공간을 마련합니다. 일반적으로
+        송신 버퍼가 가득 차는 경우는 드물겠지만, 이 경우 많은 오버헤드를 초래할 수 있으므로
+    </p>
+
+    <p style="padding-left:40px;">
+        한 프레임에서 보낼 메시지의 양을 가능한 최소한으로 유지하는 것이 좋습니다. 
+    </p>
+
+    <br>
+
+    <p style="padding-left:40px;">
+       보낸 메시지에 대한 처리는
+       <a href="#property9">NetworkManager.onReadMessage</a> 를 참고하시길 바랍니다.
+    </p>
+
+    <br>
+    <h1 style="padding-left:60px; border-bottom:none">Parameters</h1>
+    <table>
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              msg
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                전송할 메시지가 포함되어 있는
+                <span class="code">byte[]</span> 타입의 배열. <p></p>
+            </td>
+        </tr>
+
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              startIndex
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+              <span class="code">msg</span>
+              에 담긴 메시지의 시작 부분의 인덱스(=offset) <p></p>
+            </td>
+        </tr>
+
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              length
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+              전송할 메시지의 길이. <p></p>
+            </td>
+        </tr>
+    </table>
+
+    <h1 style="padding-left:60px; border-bottom:none">Return value</h1>
+    <table>
+        <tr><td style="padding-left:80px; font-size:20px">
+            (none)
+        </td></tr>
+    </table>
+
+    <h1 style="padding-left:60px; border-bottom:none">Exceptions</h1>
+    <table>
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              NullReferenceException
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                <span class="code">msg</span>
+                가 
+                <span class="code">null</span>
+                인 경우<p></p>
+            </td>
+        </tr>
+        
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              IndexOutOfRangeException
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                <span class="code">startIndex</span> 또는
+                <span class="code">length</span>
+                의 값이 음수(Negative)이거나, 
+                <span class="code">msg</span>
+                의 범위를 벗어나는 경우<p></p>
+            </td>
+        </tr>
+
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+               ObjectDisposedException
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                함수 실행 도중에 소켓이 닫혔습니다.<p></p>
+            </td>
+        </tr>
+
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+               SocketException
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+               소켓에 접근하는데 오류가 발생했습니다.
+            </td>
+        </tr>
+    </table>
+
+    <h1 style="padding-left:60px; border-bottom:none">Example</h1>
+
+    <pre class="code">
+    <code>
+        class Example : MonoBehaviour {
+    
+            byte[] msgBuffer = new byte[16];
+            
+            enum InputType {
+              None  = 0,
+              Up    = 1,
+              Left  = 2,
+              Right = 4,
+              Down  = 8
+            };
+            
+            private void Start() {
+                NetworkManager.onUpdate += ()=>{
+                    InputType input = InputType.None;
+                    
+                    if(Input.GetKey(KeyCode.LeftArrow))  input |= InputType.Left;
+                    if(Input.GetKey(KeyCode.RightArrow)) input |= InputType.Right;
+                    if(Input.GetKey(KeyCode.UpArrow))    input |= InputType.Up;
+                    if(Input.GetKey(KeyCode.DownArrow))  input |= InputType.Down;
+                    
+                    if(input != InputType.None) {
+                      msgBuffer[0] = (byte) input;
+                      NetworkManager.SendMessage(msgBuffer,0,1);
+                    }
+                };
+            }
+        };
+        
+    </code>
+    </pre>
+
+    <br><br><br><br>
+
+    <h1 style="padding-left:30px" id="method4">NetworkManager.Host2Network</h1>
+    <table>
+        <tr>
+            <td style="padding-left:40px;">
+               <div>
+                  <span class="kw1">public static byte</span>[] 
+                  Host2Network( <br>
+                    <table>
+                       <tr>
+                          <td style="padding-left:40px"><span class="kw1">byte</span>[]</td>
+                          <td>msg</td>
+                       </tr>
+                          
+                       <tr>
+                        <td style="padding-left:40px"><span class="kw1">int</span></td>
+                        <td>startIndex</td>
+                       </tr>
+
+                       <tr>
+                        <td style="padding-left:40px"><span class="kw1">int</span></td>
+                        <td>length</td>
+                       </tr>
+                    </table>
+                  );
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p style="padding-left:40px;">
+       보낼 메시지 일부분의 바이트 순서(Byte order)를 네트워크 상에서의 바이트 순서(Byte order)로 변경합니다.
+       <span class="code">String</span> 
+       같은 문자열처럼
+    </p>
+
+    <p style="padding-left:40px;">
+       <span class="code">byte[]</span>
+       타입으로 변경해도, 바이트 순서를 고려할 필요없는 데이터에 대해서는 위 함수를 적용할 필요가 없습니다.
+       하지만, 
+       <span class="code">float</span>
+    </p>
+
+    <p style="padding-left:40px;">
+       와 같이 사용하는 환경에 따라 바이트의 순서가 다를 수 있는, multibytes 데이터에 대해서는 해당 함수를 사용해야 합니다.
+       물론, 
+       <span class="code">3.141592f</span>
+       를
+    </p>
+
+    <p style="padding-left:40px;">
+        <span class="code">"3.141592"</span>
+        와 같은 숫자 문자열로 변경한 뒤, 
+        <span class="code">byte[]</span>
+        타입으로 변경한다면 바이트 순서에 대한 문제는 고려할 필요 없습니다만,
+    </p>
+
+    <p style="padding-left:40px;">
+        송신 측에서는 값에 따라서 숫자 문자열의 크기가 많이 커질 수도 있으며,
+        수신 측에서는 숫자 문자열을 해독(Decoding)해야 하므로 
+    </p>
+
+    <p style="padding-left:40px;">
+       상황에 따라서 많은 오버헤드가 발생할 수도 있습니다. 대신, 
+       <span class="code">BitConverter.GetBytes(3.141592f)</span>
+       와 같은 함수를 써서 길이가 4인 
+    </p>
+
+    <p style="padding-left:40px;">
+        <span class="code">byte[]</span>
+       을 얻는 것으로 항상 고정된 크기의 데이터를 얻을 수 있습니다.
+       이때 얻은 데이터는 사용자의 환경에서 사용하는 엔디안(Endianess)마다
+    </p>
+
+    <p style="padding-left:40px;">
+        따르기 때문에, 해당 함수를 사용하여 네트워크 상의 엔디안(Endianess) 형식으로
+        수정해줍니다.
+    </p>
+
+    <br>
+
+    <p style="padding-left:40px;">
+       단, 이 방법은 송신 측과 수신 측의 환경이 모두 IEEE-754 표준을 따르고 있다는 가정이 있었으며,
+       수신 측이 위 표준을 따르지 않을 경우, 
+    </p>
+
+    <p style="padding-left:40px;">
+        제대로 동작한다고 보장할 수 없습니다. 하지만,
+        unity가 IEEE-754 형식의 
+        <span class="code">float</span>, 
+        <span class="code">double</span>
+        을 사용하고 있고, 많은 아키텍쳐에서
+    </p>
+
+    <p style="padding-left:40px;">
+        이를 따르고 있기에
+        <span class="code">NetworkManager</span>
+        도 내부적으로 이러한 방식을 채택하였습니다.
+        <span class="code">int</span>, 
+        <span class="code">short</span>
+        같은 데이터에서도 고려해야하는 부분임에 유의하시길 바랍니다.
+    </p>
+
+    <br>
+    <h1 style="padding-left:60px; border-bottom:none">Parameters</h1>
+    <table>
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              msg
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                바이트 순서(Byte order)를 수정할 메시지가 포함되어 있는
+                <span class="code">byte[]</span> 타입의 배열. <p></p>
+            </td>
+        </tr>
+
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              startIndex
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+              <span class="code">msg</span>
+              에서 바이트 순서(Byte order)를 수정하고자 하는 메시지의 시작 인덱스(=offset)<p></p>
+            </td>
+        </tr>
+
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              length
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+              바이트 순서(Byte order)를 수정할 메시지의 길이. <p></p>
+            </td>
+        </tr>
+    </table>
+
+    <h1 style="padding-left:60px; border-bottom:none">Return value</h1>
+    <table>
+        <tr><td style="padding-left:80px; font-size:20px">
+            인자로 받았던 
+            <span class="code">msg</span>
+            를 그대로 돌려줍니다.
+        </td></tr>
+    </table>
+
+
+    <h1 style="padding-left:60px; border-bottom:none">Exceptions</h1>
+    <table>
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              NullReferenceException
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                <span class="code">msg</span>
+                가 
+                <span class="code">null</span>
+                인 경우<p></p>
+            </td>
+        </tr>
+        
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              IndexOutOfRangeException
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                <span class="code">startIndex</span> 또는
+                <span class="code">length</span>
+                의 값이 음수(Negative)이거나, 
+                <span class="code">msg</span>
+                의 범위를 벗어나는 경우<p></p>
+            </td>
+        </tr>
+    </table>
+
+    <h1 style="padding-left:60px; border-bottom:none">Example</h1>
+
+    <pre class="code">
+    <code>
+    class Example : MonoBehaviour {
+        byte[]      msgBuffer = new byte[1024];
+        Vector2     velocity  = Vector2.zero;
+        Rigidbody2D player;
+
+        enum MessageType {
+           PlayerPosition
+        };
+
+        // Start() Method
+        void Start() { 
+          player = GetComponent&lt;Rigidbody2D&gt;();
+
+          NetworkManager.onUpdate = ()=>{
+              Vector2 force = new Vector2(
+                Input.GetAxis("Horizontal") * NetworkManager.deltaTime,
+                Input.GetAxis("Vertical")   * NetworkManager.deltaTime
+              );
+              velocity += force;
+              
+              byte[] xPos = BitConverter.GetBytes(player.position.x);
+              byte[] yPos = BitConverter.GetBytes(player.position.y);
+              
+              msgBuffer[0] = (byte) MessageType.PlayerPosition;
+              NetworkManager.Host2Network(xPos,0,4).CopyTo(msgBuffer,1);
+              NetworkManager.Host2Network(yPos,4,4).CopyTo(msgBuffer,5);
+              NetworkManager.SendMessage(msgBuffer,0,9);
+          };
+
+          NetworkManager.onFixedUpdate = ()=>{
+              player.MovePosition(player.position + velocity);
+              velocity *= 0.9f;
+          };
+        }
+    }
+    </code>
+    </pre>
+
+    <br><br><br><br>
+
+    <h1 style="padding-left:30px" id="method5">NetworkManager.Network2Host</h1>
+    <table>
+        <tr>
+            <td style="padding-left:40px;">
+               <div>
+                  <span class="kw1">public static void</span>
+                  Network2Host( <br>
+                    <table>
+                       <tr>
+                        <td style="padding-left:40px"><span class="kw1">int</span></td>
+                        <td>startIndex</td>
+                       </tr>
+
+                       <tr>
+                        <td style="padding-left:40px"><span class="kw1">int</span></td>
+                        <td>length</td>
+                       </tr>
+                    </table>
+                  );
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p style="padding-left:40px;">
+       <span class="code">NetworkManager.SendMessage</span>
+       로 보낸 메시지들은 수신 측에서 
+       <span class="code">NetworkManager.onReadMessage</span>
+       에 등록한 콜백함수를 통해 읽고 처리할 수 있습니다.
+    </p>
+
+    <p style="padding-left:40px;">
+       이때, 주어지는 메시지는 불필요한 복사본을 막기 위하여
+       내부 메시지 큐(Message queue)의 읽기전용 뷰(readonly view)를 나타내는
+       <span class="code">ReadOnlySpan&lt;byte&gt;</span>
+       타입이기에, 
+    </p>
+
+    <p style="padding-left:40px;">
+       사용자는 메시지의 내용을 수정할 수 없습니다. 이렇게 되면, 바이트 순서(Byte order)를
+       수정해야 하는 메시지의 일부분을 만질 수 없기에 메시지 해독에 문제가 생기게 됩니다.
+    </p>
+
+    <p style="padding-left:40px;">
+       <span class="code">NetworkManager</span>
+       는 이를 위해 
+       <span class="code">NetworkManager.Network2Host</span>
+       라는 메소드를 제공합니다. 해당 함수는 현재 
+       <span class="code">NetworkManager.onReadMessage</span>
+       콜백에서 
+    </p>
+
+    <p style="padding-left:40px;">
+        읽고 있는 메시지가 있는 경우에만 유효합니다. 읽고 있는 메시지가 없다면,
+        함수 호출 즉시 종료됩니다. 메시지 일부분의 바이트 순서(Byte order)를 호스트(Host)의 
+    </p>
+
+    <p style="padding-left:40px;">
+        바이트 순서(Byte order)로 바꿔줍니다. 이후, 사용자는
+        <span class="code">BitConverter.ToSingle(msg)</span>
+        등으로 
+        <span class="code">ReadOnlySpan&lt;byte&gt;</span>
+        를 
+        <span class="code">float</span>
+        등의 원본 데이터로 변환해줍니다.
+    </p>
+
+    <br>
+    <p style="padding-left:40px;">
+        해당 함수는 thread-safe 하지 않습니다. 즉, 메인 스레드 이외의 스레드에서 이 함수를 호출하는 것은
+        <b>Undefined behaviour</b> 입니다. 
+    </p>
+
+    <br>
+    <h1 style="padding-left:60px; border-bottom:none">Parameters</h1>
+    <table>
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              startIndex
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                읽고 있는 메시지에서
+                바이트 순서(Byte order)를 수정하고자 하는 부분의 시작 인덱스(=offset)<p></p>
+            </td>
+        </tr>
+
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              length
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+              바이트 순서(Byte order)를 수정할 메시지의 길이. <p></p>
+            </td>
+        </tr>
+    </table>
+
+    <h1 style="padding-left:60px; border-bottom:none">Return value</h1>
+    <table>
+        <tr><td style="padding-left:80px; font-size:20px">
+            (none)
+        </td></tr>
+    </table>
+
+    <h1 style="padding-left:60px; border-bottom:none">Example</h1>
+
+    <pre class="code">
+    <code>
+    class Example : MonoBehaviour {
+        byte[]      msgBuffer = new byte[1024];
+        Vector2     velocity  = Vector2.zero;
+        Rigidbody2D player;
+    
+        enum MessageType {
+            PlayerPosition
+        };
+    
+        // Start() Method
+        void Start() { 
+            player = GetComponent&lt;Rigidbody2D&gt;();
+    
+            NetworkManager.onUpdate = ()=>{
+                Vector2 force = new Vector2(
+                    Input.GetAxis("Horizontal") * NetworkManager.deltaTime,
+                    Input.GetAxis("Vertical")   * NetworkManager.deltaTime
+                );
+                velocity += force;
+                  
+                byte[] xPos = BitConverter.GetBytes(player.position.x);
+                byte[] yPos = BitConverter.GetBytes(player.position.y);
+                  
+                msgBuffer[0] = (byte) MessageType.PlayerPosition;
+                NetworkManager.Host2Network(xPos,0,4).CopyTo(msgBuffer,1);
+                NetworkManager.Host2Network(yPos,4,4).CopyTo(msgBuffer,5);
+                NetworkManager.SendMessage(msgBuffer,0,9);
+            };
+    
+            NetworkManager.onFixedUpdate = ()=>{
+                player.MovePosition(player.position + velocity);
+                velocity *= 0.9f;
+            };
+
+            NetworkManager.onReadMessage = (msg)=>{
+                MessageType opcode = (MessageType) msg[0];
+
+                if(opcode == MessageType.PlayerPosition) {
+                    NetworkManager.Network2Host(1,4);
+                    NetworkManager.Network2Host(5,4);
+
+                    velocity += new Vector2(
+                        BitConverter.ToSingle(msg[1..]),
+                        BitConverter.ToSingle(msg[5..])
+                    );
+                }
+            };
+        }
+    }
+
+
+    </code>
+    </pre>
+
+    <br><br><br><br>
+
+    <h1 style="padding-left:30px" id="property0">NetworkManager.hostIP</h1>
+    <table>
+        <tr>
+            <td style="padding-left:40px;">
+               <div>
+                  <span class="kw1">public static String</span>
+                  hostIP {
+                    <span class="kw1">get</span>;
+                  }
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p style="padding-left:40px;">
+       호스트의 아이피(IPv4)를 나타내는 
+       <span class="code">String</span>
+       값을 얻습니다. 해당 함수는 
+       <span class="code">NetworkManager.CreateServer()</span>
+       또는 
+       <span class="code">NetworkManager.CreateClient()</span>
+       메소드 성공 시부터 유효합니다.
+    </p>
+
+    <p style="padding-left:40px;">
+        이 속성 값에서 나타내는 값은 일반적으로 클라이언트 측에서
+        <span class="code">NetworkManager.CreateClient()</span>
+        에 전달할 인자의 내용을 담고 있습니다.
+    </p>
+
+    <br>
+    <h1 style="padding-left:60px; border-bottom:none">Property Value</h1>
+    <table>
+        <tr><td style="padding-left:80px; font-size:20px">
+            호스트의 아이피(IPv4)를 나타내는 
+            <span class="code">String</span>
+        </td></tr>
+    </table>
+
+    <h1 style="padding-left:60px; border-bottom:none">Exceptions</h1>
+    <table>
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              NullReferenceException
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                <span class="code">NetworkManager</span>
+                의 인스턴스가 초기화되지 않은 경우
+            </td>
+        </tr>
+    </table>
+    <h1 style="padding-left:60px; border-bottom:none">Example</h1>
+
+    <pre class="code" style="width:1300px; height:360px">
+    <code>
+    class Example : MonoBehaviour {
+        
+        // Start() Coroutine
+        IEnumerator Start() {
+            NetworkManager.CreateServer();
+            UnityEngine.Debug.Log("possible output: " + NetworkManager.hostIP); // 123.45.67.890
+            NetworkManager.Close();
+            yield return null;
+
+            NetworkManager.CreateClient("127.0.0.1");
+            UnityEngine.Debug.Log(NetworkManager.hostIP); // 127.0.0.1
+        }
+    };
+    </code>
+    </pre>
+
+    <br><br><br><br>
+
+    <h1 style="padding-left:30px" id="property10">NetworkManager.port</h1>
+    <table>
+        <tr>
+            <td style="padding-left:40px;">
+               <div>
+                  <span class="kw1">public static int</span>
+                  port {
+                    <span class="kw1">get</span>;
+                    <span class="kw1">set</span>;
+                  }
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p style="padding-left:40px;">
+        <a href="#method0">NetworkManager.CreateServer()</a>
+        와
+        <a href="#method1">NetworkManager.CreateClient()</a>
+        에서 소켓을 생성할 때 사용될 포트 번호(port number)입니다.
+        해당 속성의 기본값은 
+        <span class="code">11111</span>
+        입니다.
+    </p>
+
+    <p style="padding-left:40px;">
+       해당 속성의 값의 범위는 
+       <span class="code">[IPEndPoint.MinPort, IPEndPoint.MaxPort]</span>
+       입니다. 
+       <span class="code">NetworkManager.CreateServer()</span>
+       또는 
+       <span class="code">NetworkManager.CreateClient()</span>
+    </p>
+
+    <p style="padding-left:40px;">
+       의 실패 원인으로써 해당 속성이 범위를 벗어난 값을 가지고 있거나,
+       이미 해당 포트 번호가 사용 중인 경우를 생각해볼 수 있습니다.
+    </p>
+
+    <br>
+    <p style="padding-left:40px;">
+        해당 속성은 thread-safe 하지 않습니다. 즉, 메인 스레드 이외의 스레드에서 이 속성을 사용하는 것은
+        <b>Undefined behaviour</b> 입니다. 
+    </p>
+
+    <br>
+    <h1 style="padding-left:60px; border-bottom:none">Property Value</h1>
+    <table>
+        <tr><td style="padding-left:80px; font-size:20px">
+            포트 번호(port number)를 나타내는
+            <span class="code">int</span>
+        </td></tr>
+    </table>
+
+    <h1 style="padding-left:60px; border-bottom:none">Exceptions</h1>
+    <table>
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              NullReferenceException
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                <span class="code">NetworkManager</span>
+                의 인스턴스가 초기화되지 않은 경우
+            </td>
+        </tr>
+    </table>
+    <h1 style="padding-left:60px; border-bottom:none">Example</h1>
+
+    <pre class="code" style="width:1300px; height:360px">
+    <code>
+    class Example : MonoBehaviour {
+
+       // Start() Coroutine
+       IEnumerator Start() {
+          UnityEngine.Debug.Log(NetworkManager.port); // 11111
+          NetworkManager.CreateServer(); // Associates a socket with local endpoint `IPv4:11111`
+          NetworkManager.Close(); // closes the socket
+          yield return null;
+
+          NetworkManager.port = 4096;
+          UnityEngine.Debug.Log(NetworkManager.port); // 4096
+          NetworkManager.CreateClient("127.0.0.1"); // create a client with remote endpoint `127.0.0.1:4096`
+       }
+    };
+    </code>
+    </pre>
+
+    <br><br><br><br>
+
+    <h1 style="padding-left:30px" id="property1">NetworkManager.isServer</h1>
+    <table>
+        <tr>
+            <td style="padding-left:40px;">
+               <div>
+                  <span class="kw1">public static bool</span>
+                  isServer {
+                    <span class="kw1">get</span>;
+                  }
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p style="padding-left:40px;">
+      생성한 소켓이 서버 소켓인지 여부를 얻습니다.
+      해당 함수는 
+       <span class="code">NetworkManager.CreateServer()</span>
+       또는 
+       <span class="code">NetworkManager.CreateClient()</span>
+       메소드 성공 시부터 유효합니다.
+    </p>
+
+    <p style="padding-left:40px;">
+      해당 속성은 소켓 생성 후, 서버와 클라이언트에게 다른 일을 부여하게 할때
+      유용하게 사용될 수 있습니다.
+    </p>
+
+    <br>
+    <h1 style="padding-left:60px; border-bottom:none">Property Value</h1>
+    <table>
+        <tr><td style="padding-left:80px; font-size:20px">
+            생성된 소켓이 서버이면 
+            <span class="code">true</span>
+            , 이외의 경우에는 
+            <span class="code">false</span>
+        </td></tr>
+    </table>
+
+    <h1 style="padding-left:60px; border-bottom:none">Exceptions</h1>
+    <table>
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              NullReferenceException
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                <span class="code">NetworkManager</span>
+                의 인스턴스가 초기화되지 않은 경우
+            </td>
+        </tr>
+    </table>
+    <h1 style="padding-left:60px; border-bottom:none">Example</h1>
+
+    <pre class="code" style="height:400px;">
+    <code>
+        class Example : MonoBehaviour {
+          
+            // Init() Coroutine
+            IEnumerator Init() {
+                while(NetworkManager.status != SocketStatus.Connected && 
+                      NetworkManager.status != SocketStatus.Closed      ) {
+
+                    yield return null; 
+                }
+
+                if(NetworkManager.isServer) {
+                    NetworkManager.onUpdate      = ServerUpdate;
+                    NetworkManager.onFixedUpdate = ServerFixedUpdate;
+                }
+                else {
+                    NetworkManager.onUpdate      = ClientUpdate;
+                    NetworkManager.onFixedUpdate = ClientFixedUpdate;
+                }
+            }
+        };
+    </code>
+    </pre>
+
+    <br><br><br><br>
+    <h1 style="padding-left:30px" id="property2">NetworkManager.status</h1>
+    <table>
+        <tr>
+            <td style="padding-left:40px;">
+               <div>
+                  <span class="kw1">public static</span>
+                  <span class="kw2">SocketStatus</span>
+                  status {
+                    <span class="kw1">get</span>;
+                  }
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p style="padding-left:40px;">
+      현재 소켓의 상태를 얻습니다. 사용자는 이 속성을 통해 소켓이 정상적으로 생성되었는지,
+      연결이 끊겼는지, 연결 중인지, 연결에 성공했는지를 확인할 수 있습니다.
+    </p>
+
+    <p style="padding-left:40px;">
+       디폴트값은 
+       <span class="code">Closed</span>
+       이며, 
+       <span class="code">NetworkManager.CreateServer()</span> 또는
+       <span class="code">NetworkManager.CreateClient()</span>
+       를 통해 
+       <span class="code">NotConnected</span>
+       상태로 만들어줄 수 있습니다.
+    </p>
+
+    <p style="padding-left:40px;">
+        이 상태에서 서버 측은 클라이언트의 요청을 대기하고, 클라이언트 측은 서버 측으로 연결을 요청합니다.
+        이때, 서버와 클라이언트를 발견했다면 
+        <span class="code">Connecting</span>
+        상태가 됩니다.
+    </p>
+
+    <p style="padding-left:40px;">
+        <span class="code">Connecting</span> 
+        상태에서 서버 측은 평균 핑(Ping)과 평균 초당 프레임 속도(FPS)를 측정하여, 
+        서버와 클라이언트의 초당 프레임 속도(FPS)를 제한시킵니다. 이 과정이 끝나면 비로소
+    </p>
+
+    <p style="padding-left:40px;">
+        <span class="code">Connected</span>
+        상태가 됩니다. 이 상태부터
+        <span class="code">SendMessage</span>
+        함수를 사용하여 사용자 메시지를 송수신할 수 있게 됩니다.
+        서버와 클라이언트의 통신이 종료되면(=소켓이 닫히면)
+    </p>
+
+    <p style="padding-left:40px;">
+        <span class="code">Closed</span>
+        상태가 되며, 정상/비정상적인 원인으로 종료되었는지 여부는
+        <a href="#property3">NetworkManager.exitCode</a>
+        를 참고하시길 바랍니다.
+    </p>
+
+    <br>
+
+    <p style="padding-left:40px;">
+        해당 속성은 thread-safe 하다는 것에 주목하시길 바랍니다. 
+        덕분에
+        <span class="code">if(NetworkManager.status==SocketStatus.Connected) {...}</span>
+        인 코드들이 "첫 번째" 프레임 부터 
+    </p>
+
+    <p style="padding-left:40px;">
+       실행된다고 보장할 수 있습니다. 정확하게 어디서 값이 세팅되는지와, "첫번째" 프레임이 무엇인지는
+       <a style="font-weight:bold; text-decoration: none;" href="#s2">Order of execution of event functions</a>
+        를 참고하시길 바랍니다.
+    </p>
+
+    <br>
+    <h1 style="padding-left:60px; border-bottom:none">Property Value</h1>
+ 
+    <p style="padding-left:80px;">
+       소켓의 상태를 나타내는 
+       <span class="code">SocketStatus</span>
+       열거형입니다.
+    </p>
+
+    <table style="border-collapse:collapse; font-size:20px; margin-left:80px">
+        <tr style="border-top:1px solid #aaa;">
+            <td>
+                Closed
+            </td>
+            <td>&nbsp;&nbsp; 0x0 &nbsp;&nbsp;</td>
+            <td>
+                <p>
+                    현재 소켓은 닫힌 상태입니다. 
+                </p>
+            </td>
+        </tr>
+        
+        <tr style="border-top:1px solid #aaa;">
+            <td>
+                NotConnected
+              </td>
+              <td>&nbsp;&nbsp; 0x1 &nbsp;&nbsp;</td>
+              <td>
+                  <p>
+                      소켓이 생성되었으며, 서버 또는 클라이언트와의 연결을 요청 및 대기 중입니다.
+                  </p>
+            </td>
+        </tr>
+
+        <tr style="border-top:1px solid #aaa;">
+            <td>
+                Connecting
+              </td>
+              <td>&nbsp;&nbsp; 0x2 &nbsp;&nbsp;</td>
+              <td>
+                  <p>
+                      서버 또는 클라이언트를 찾았으며, 연결 중에 있습니다.
+                  </p>
+            </td>
+        </tr>
+
+        <tr style="border-top:1px solid #aaa;">
+            <td>
+                Connected
+              </td>
+              <td>&nbsp;&nbsp; 0x3 &nbsp;&nbsp;</td>
+              <td>
+                  <p>
+                      서버와 클라이언트가 연결된 상태입니다.
+                  </p>
+            </td>
+        </tr>
+    </table>
+
+
+    <h1 style="padding-left:60px; border-bottom:none">Exceptions</h1>
+    <table>
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              NullReferenceException
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                <span class="code">NetworkManager</span>
+                의 인스턴스가 초기화되지 않은 경우
+            </td>
+        </tr>
+    </table>
+    <h1 style="padding-left:60px; border-bottom:none">Example</h1>
+
+    <pre class="code" style="height:700px">
+    <code>
+        IEnumerator Loading() {
+            Text   loadingText = GetComponent&lt;Text&gt;();
+            String opponent    = NetworkManager.isServer ? "<strong>클라이언트</strong>" : "<strong>서버</strong>";
+            String postfix     = "";
+           
+            while(true) {
+                switch(NetworkManager.status) {
+                  case SocketStatus.NotConnected: {
+                    loadingText.text = $"{opponent}<strong>를 찾는 중입니다</strong>{postfix}";
+                    break;
+                  }
+                  case SocketStatus.Connecting: {
+                    loadingText.text = $"{opponent}<strong>를 찾았습니다!</strong>{postfix}";
+                    break;
+                  }
+                  case SocketStatus.Connected: {
+                    loadingText.text = "{opponent}<strong>와 연결되었습니다</strong>";
+                    yield break;
+                  }
+                  case SocketStatus.Closed: {
+                    loadingText.text = "<strong>연결이 종료되었습니다</strong>";
+                    yield break;
+                  }
+                };
+                
+                if(postfix.Length > 3) {
+                    postfix = "";
+                }
+                else {
+                    postfix += ".";
+                }
+                yield return null;
+            }
+        }
+    </code>
+    </pre>
+
+    <br><br><br><br>
+    <h1 style="padding-left:30px" id="property3">NetworkManager.exitCode</h1>
+    <table>
+        <tr>
+            <td style="padding-left:40px;">
+               <div>
+                  <span class="kw1">public static</span>
+                  <span class="kw2">SocketExitCode</span>
+                  exitCode {
+                    <span class="kw1">get</span>;
+                  }
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p style="padding-left:40px;">
+       소켓의 종료코드를 얻습니다.
+       해당 속성은 <span class="code">NetworkManager.status==SocketStatus.Closed</span>
+       일 때에만 유효하며, 
+    </p>
+
+    <p style="padding-left:40px;">
+        생성된 소켓이 닫힌 이유를 확인하는데 사용됩니다. 
+        0x1 ~ 0x3 까지의 종료코드는 모두 클라이언트 측에서만 사용됩니다.
+    </p>
+
+    <p style="padding-left:40px;">
+        또한, 소켓이 닫힌 이후
+        <span class="code">NetworkManager.CreateServer()</span>
+        또는
+        <span class="code">NetworkManager.CreateClient()</span>
+        를 호출했다면
+    </p>
+
+    <p style="padding-left:40px;">
+       이 함수들의 성공 여부를 떠나서, 위 속성의 값은 더이상 유효하지 않게 됩니다.
+    </p>
+
+    <br>
+    <h1 style="padding-left:60px; border-bottom:none">Property Value</h1>
+ 
+    <p style="padding-left:80px;">
+       소켓이 종료된 이유를 담고 있는 
+       <span class="code">SocketExitCode</span>
+       열거형입니다.
+    </p>
+
+    <table style="border-collapse:collapse; font-size:20px; margin-left:80px">
+        <tr style="border-top:1px solid #aaa;">
+            <td>
+                None
+            </td>
+            <td>&nbsp;&nbsp; 0x0 &nbsp;&nbsp;</td>
+            <td>
+                <p>
+                    서버 또는 클라이언트 측이 
+                    <span class="code">NetworkManager.Close()</span>
+                    를 호출하였습니다.
+                </p>
+            </td>
+        </tr>
+        
+        <tr style="border-top:1px solid #aaa;">
+            <td>
+                RoomIsFull
+              </td>
+              <td>&nbsp;&nbsp; 0x1 &nbsp;&nbsp;</td>
+              <td>
+                  <p>
+                    호스트로 연결 요청을 보냈지만, 이미 방이 가득차서 거부당했습니다.
+                  </p>
+            </td>
+        </tr>
+
+        <tr style="border-top:1px solid #aaa;">
+            <td>
+                Denied
+              </td>
+              <td>&nbsp;&nbsp; 0x2 &nbsp;&nbsp;</td>
+              <td>
+                  <p>
+                    호스트 컴퓨터가 연결 요청을 거부했습니다. 일반적으로 해당 종료코드는
+                    호스트 컴퓨터에 서버가 존재하지 않는
+                  </p>
+                  <p>
+                    경우에 해당됩니다. 다른 가능성으로 보안 문제 등을 생각할 수 있습니다.
+                  </p>
+            </td>
+        </tr>
+
+        <tr style="border-top:1px solid #aaa;">
+            <td>
+                Timeout
+              </td>
+              <td>&nbsp;&nbsp; 0x3 &nbsp;&nbsp;</td>
+              <td>
+                  <p>
+                    호스트로 연결 요청을 보냈지만, 시간이 지나도 연결이 완료되지 않았습니다.
+                  </p>
+            </td>
+        </tr>
+
+        <tr style="border-top:1px solid #aaa;">
+            <td>
+                NoResponse
+              </td>
+              <td>&nbsp;&nbsp; 0x4 &nbsp;&nbsp;</td>
+              <td>
+                  <p>
+                    서버와 클라이언트가 연결된 상태지만, 상대방으로부터 응답이 없습니다.
+                  </p>
+            </td>
+        </tr>
+    </table>
+
+
+    <h1 style="padding-left:60px; border-bottom:none">Exceptions</h1>
+    <table>
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              NullReferenceException
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                <span class="code">NetworkManager</span>
+                의 인스턴스가 초기화되지 않은 경우
+            </td>
+        </tr>
+    </table>
+    <h1 style="padding-left:60px; border-bottom:none">Example</h1>
+
+    <pre class="code" style="height:700px">
+        <code>
+        IEnumerator Loading() {
+            Text   loadingText = GetComponent&lt;Text&gt;();
+            String opponent    = NetworkManager.isServer ? "<strong>클라이언트</strong>" : "<strong>서버</strong>";
+            String postfix     = "";
+
+            String[] reason = new String[]{
+                "<strong>연결이 종료되었습니다</strong>",  
+                "<strong>방이 가득찼습니다</strong>",
+                "<strong>서버를 찾을 수 없었습니다</strong>",
+                "<strong>연결시간이 초과되었습니다</strong>",
+                $"{opponent}<strong>로부터 응답이 없습니다</strong>"
+            };
+               
+            while(true) {
+                switch(NetworkManager.status) {
+                    case SocketStatus.NotConnected: {
+                        loadingText.text = $"{opponent}<strong>를 찾는 중입니다</strong>{postfix}";
+                        break;
+                    }
+                    case SocketStatus.Connecting: {
+                        loadingText.text = $"{opponent}<strong>를 찾았습니다!</strong>{postfix}";
+                        break;
+                    }
+                    case SocketStatus.Connected: {
+                        loadingText.text = $"{opponent}<strong>와 연결되었습니다</strong>";
+                        yield break;
+                    }
+                    case SocketStatus.Closed: {
+                        loadingText.text = reason[(int) NetworkManager.exitCode];
+                        yield break;
+                    }
+                };
+                    
+                if(postfix.Length > 3) {
+                    postfix = "";
+                }
+                else {
+                    postfix += ".";
+                }
+                yield return null;
+            }
+        }
+        </code>
+        </pre>
+
+    <br><br><br><br>
+    <h1 style="padding-left:30px" id="property4">NetworkManager.deltaTime</h1>
+    <table>
+        <tr>
+            <td style="padding-left:40px;">
+               <div>
+                  <span class="kw1">public static float</span>
+                  deltaTime {
+                    <span class="kw1">get</span>;
+                  }
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p style="padding-left:40px;">
+       서버와 클라이언트 최초 연결 시에 동기화된 초당 프레임 속도(FPS)를 얻습니다.
+       예를 들어, 위 속성의 값이 
+       <span class="code">0.016777f</span>
+       라면 이는 서버와 클라이언트 측의
+    </p>
+
+    <p style="padding-left:40px;">
+        <span class="code">NetworkManager.Update()</span>
+        가 0.016777 초 마다 호출되도록 조정되었다는 의미입니다. 이 속성을 이용한
+        시간 측정은 다음처럼 해줄 수 있습니다:
+    </p>
+
+    <br>
+
+    <pre class="code" style="width:800px; height:260px">
+    <code>
+    IEnumerator Generator() {
+        float totalSeconds = 0f;
+        while ((totalSeconds+= NetworkManager.deltaTime)&lt; 5f) {
+            yield return null;
+        }
+        byte[] msg = Encoding.UTF8.GetBytes("5 seconds later");
+        NetworkManager.SendMessage(msg, 0, msg.Length);
+    }
+    </code>
+    </pre>
+
+    <p style="padding-left:40px;">
+        위 코드는 
+        <span class="code">NetworkManager.deltaTime</span>
+        을 사용하여 5초가 지나면, 
+        <span class="code">"5 seconds later"</span>
+        라는 메시지를 상대측으로 전송하는 코루틴을 정의합니다.
+    </p>
+
+    <p style="padding-left:40px;">
+        <span class="code">NetworkManager.deltaTime</span>
+        은 
+        <span class="code">Time.deltaTime</span>
+        과 비슷하지만, 프레임 동기화 또는 랙(lag)으로 인하여 지연된 시간의
+        영향을 받지 않는다는 장점이 있습니다.
+    </p>
+
+    <p style="padding-left:40px;">
+      현재 동기화된 프레임 속도가 60 fps (=0.016777) 이라면 
+      <span class="code">NetworkManager.deltaTime</span>
+      은 항상 0.016777 을 돌려주므로, 서버와 클라이언트 코드에서
+    </p>
+
+    <p style="padding-left:40px;">
+        위 
+        <span class="code">Generator</span>
+        함수의 while 문이 항상 같은 시간에 끝남을 보장합니다.
+    </p>
+
+    <br>
+
+    <p style="padding-left:40px;">
+        <span class="code">NetworkManager.deltaTime</span>
+        의 값은 서버와 클라이언트가 처음으로 연결될 때
+        딱 한 번만 초기화되며, 이후 절대 값이 변하지 않습니다.
+    </p>
+
+    <p style="padding-left:40px;">
+        정확하게는
+        <span class="code">NetworkManager.status == SocketStatus.Connecting</span>
+        일 때에 초기화되며, 
+        <span class="code">NetworkManager.status == SocketStatus.Connected</span>
+    </p>
+
+    <p style="padding-left:40px;">
+        인 경우에만 사용할 수 있는 속성입니다. 이는 
+        <span class="code">NetworkManager</span>
+        가 서버와 클라이언트의 초당 프레임 속도(FPS)를 네트워크 지연시간을
+        무마할 수 있을 정도로 제한시키기 때문이며, 
+    </p>
+
+    <p style="padding-left:40px;">
+        <span class="code">NetworkManager.deltaTime</span>
+        은 이 과정에서 제한된 초당 프레임 속도를 의미하기 때문입니다.
+        이러한 제약은 서버와 클라이언트들로 하여금 불필요한 
+        <span class="code">Update()</span>
+        호출을 줄여줍니다. 
+    </p>
+
+
+    <p style="padding-left:40px;">
+        물론, 실제 네트워크 지연시간이 시간에 따라 변동이 있겠지만,
+        <span class="code">NetworkManager</span> 
+        가 프레임 동기화(frame synchronization) 기법을 사용하기 때문에,
+        <span class="code">NetworkManager.deltaTime</span>
+        의 값이
+    </p>
+
+    <p style="padding-left:40px;">
+        이후 변하지 않더라도 동기화에 영향을 끼치지는 않습니다.
+        단, 서버와 클라이언트가 항상 같은 프레임 번호를 유지해야 하기 때문에,
+        동기화된 초당 프레임 속도(FPS)가 60 fps 이라고 해도
+    </p>
+
+    <p style="padding-left:40px;">
+        실제 초당 프레임 속도(FPS)는 60 fps 보다 저하될 수 있습니다. 이에 대한
+        자세한 설명은 <a style="font-weight:bold; text-decoration: none;" href="#s2">Order of execution of event functions</a>
+        를 참고하시길 바랍니다.
+    </p>
+
+    <br>
+
+    <p style="padding-left:40px;">
+        또한, 똑같은 프레임 번호를 유지한다는 것이, 캐릭터의 이동 등에서 
+        <span class="code">NetworkManager.deltaTime</span>
+        을 곱해서 보간을 할 필요가 없음을 의미하는 게 아님에 유의하시길 바랍니다.
+    </p>
+
+    <p style="padding-left:40px;">
+        예를 들어, <span class="code">player.speed += 5f;</span>
+        를 하게 되면
+        1초 동안 
+        <span class="code">Update()</span>
+        를 호출해서 움직인 거리가 실행 환경에 따라 달라질 수 있습니다. 항상 1초 동안 동일한 거리를 
+    </p>
+
+    <p style="padding-left:40px;"> 
+        움직이게 하고 싶다면 대신,
+        <span class="code">player.speed += 5f * NetworkManager.deltaTime</span>
+        처럼 해주면 됩니다. 이 경우, 
+        <span class="code">5f</span>는 한번 업데이트 시 이동해야할 거리가 아닌
+    </p>
+       
+    <p style="padding-left:40px;"> 
+        1초 동안 캐릭터가 움직여야 하는 거리를 의미하게 됩니다.
+    </p>
+    <br>
+
+    <h1 style="padding-left:60px; border-bottom:none">Property Value</h1>
+ 
+    <p style="padding-left:80px;">
+       동기화된 초당 프레임 속도(FPS)를 나타내는 
+       <span class="code">float</span>
+
+    </p>
+
+    <h1 style="padding-left:60px; border-bottom:none">Exceptions</h1>
+    <table>
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              NullReferenceException
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                <span class="code">NetworkManager</span>
+                의 인스턴스가 초기화되지 않은 경우
+            </td>
+        </tr>
+    </table>
+    <h1 style="padding-left:60px; border-bottom:none">Example</h1>
+
+    <pre class="code">
+    <code>
+    class Example : MonoBehaviour {
+        Rigidbody2D player;
+        Vector2     velocity     = Vector2.zero;
+        float       speed        = 5f; // distance the player moves for 1 second
+        float       totalSeconds = 0f;
+
+        void Start() {
+            player = GetComponent&lt;Rigidbody2D&gt;();
+
+            NetworkManager.onUpdate = ()=>{
+               Vector2 force = new Vector2(
+                  Input.GetAxis("Horizontal") * speed * NetworkManager.deltaTime,
+                  Input.GetAxis("Vertical")   * speed * NetworkManager.deltaTime
+               );
+               velocity += force;
+
+               if((totalSeconds += NetworkManager.deltaTime) > 2f) {
+                  totalSeconds -= 2f;
+                  DoSomething();
+               }
+            };
+        }
+
+        void DoSomthing() {
+            /* do something.. */
+        }
+    };
+    </code>
+    </pre>
+
+    <br><br><br><br>
+    <h1 style="padding-left:30px" id="property5">NetworkManager.fixedDeltaTime</h1>
+    <table>
+        <tr>
+            <td style="padding-left:40px;">
+               <div>
+                  <span class="kw1">public static float</span>
+                  fixedDeltaTime {
+                    <span class="kw1">get</span>;
+                  }
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p style="padding-left:40px;">
+        <span class="code">NetworkManager.fixedDeltaTime</span>
+        은 
+        <span class="code">NetworkManager</span>
+        의 물리 시뮬레이션의 주기를 나타내는 속성입니다.
+        <span class="code">Time.fixedDeltaTime</span>
+        과 비슷하지만, 프레임 동기화 및 랙(lag)으로 인하여 
+    </p>
+
+    <p style="padding-left:40px;">
+        지연된 대기시간의 영향을 받지 않는다는 장점이 있습니다. 덕분에
+        <span class="code">NetworkManager.fixedDeltaTime</span>
+        을 사용한 시간 측정은 서버와 클라이언트 모두 똑같은 결과를 얻을 수 있음을 보장합니다.
+    </p>
+
+    <p style="padding-left:40px;">
+        단, 해당 속성은 
+        <span class="code">NetworkManager.onFixedUpdate</span>
+        콜백(Callback)에서 사용해야 정확한 시간 측정이 가능하다는 점에 유의해야합니다.
+        이는 
+        <span class="code">NetworkManager</span>
+        가 
+        <span class="code">Awake()</span>
+        단계에서
+    </p>
+
+    <p style="padding-left:40px;">
+        <span class="code">Physics2D.SimulationMode = SimulationMode2D.Script</span>
+        를 통해 기존의 물리 시뮬레이션을 끄고, 대신
+        <span class="code">Update()</span>
+        에서 
+        <span class="code">Physics2D.Simulate()</span>
+        로 직접 물리 시뮬레이션
+    </p>
+    
+    <p style="padding-left:40px;">
+        호출을 스케쥴링하기 때문입니다. 
+        <span class="code">NetworkManager.fixedDeltaTime</span>
+        을 이용한 시간 측정은 다음과 같이 해줄 수 있습니다:
+    </p>
+
+    <br>
+
+    <pre class="code" style="height:240px; width:820px">
+    <code>
+    NetworkManager.onFixedUpdate = ()=>{
+        this.totalSeconds += NetworkManager.fixedDeltaTime;
+        if (totalSeconds> 5f) {
+            this.totalSeconds -= NetworkManager.fixedDeltaTime;
+            NetworkManager.SendMessage(this.msgBuffer, 0, 1);
+        }
+    };
+    </code>
+    </pre>
+
+    <p style="padding-left:40px;">
+        위 코드는
+        <span class="code">NetworkManager.fixedDeltaTime</span>
+        을 사용하여 5초의 시간이 지나면, 
+        <span class="code">this.msgBuffer</span>
+        의 0번째 인덱스에 있는 1 bytes 크기의 메시지를 전송하는 콜백함수를 등록합니다.
+    </p>
+
+    <p style="padding-left:40px;">
+        <span class="code">NetworkManager.deltaTime</span>
+        과 비슷하지만, 
+        <span class="code">NetworkManager.fixedDeltaTime</span>
+        의 값은 Project Settings 에서 미리 설정해둔
+        <span class="code">Fixed Timestep</span>
+        값을 그대로 사용하기 때문에,
+    </p>
+
+    <p style="padding-left:40px;">
+        <span class="code">Fixed Timestamp: 0.02</span>
+        라면 사용하는 컴퓨터의 성능에 따라 초기 값이 다를 수 있는
+        <span class="code">NetworkManager.deltaTime</span>
+        과 달리 항상 0.02 라는 고정된 값을 돌려줍니다. 
+    </p>
+
+    <br>
+
+    <p style="padding-left:40px;">
+        또한, 사용자는 이 값을 사용해서 캐릭터의 이동 등을 보간할 필요가 없습니다.
+        <span class="code">NetworkManager.onFixedUpdate</span>
+        는 호출 주기가 항상 똑같기 때문입니다.
+    </p>
+
+    <br>
+    <h1 style="padding-left:60px; border-bottom:none">Property Value</h1>
+ 
+    <p style="padding-left:80px;">
+       <span class="code">NetworkManager</span>
+       의 물리시뮬레이션 주기를 나타내는
+       <span class="code">float</span>
+
+    </p>
+
+    <h1 style="padding-left:60px; border-bottom:none">Exceptions</h1>
+    <table>
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              NullReferenceException
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                <span class="code">NetworkManager</span>
+                의 인스턴스가 초기화되지 않은 경우
+            </td>
+        </tr>
+    </table>
+    <h1 style="padding-left:60px; border-bottom:none">Example</h1>
+
+
+    <br><br><br><br>
+    <h1 style="padding-left:30px" id="property6">NetworkManager.latency</h1>
+    <table>
+        <tr>
+            <td style="padding-left:40px;">
+               <div>
+                  <span class="kw1">public static double</span>
+                  latency {
+                    <span class="kw1">get</span>;
+                  }
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p style="padding-left:40px;">
+       <span class="code">NetworkManager.status==SocketStatus.Connecting</span>
+       일 때, 측정된 핑(Ping)의 평균값을 얻습니다. 측정 단위는 초입니다.
+    </p>
+
+    <p style="padding-left:40px;">
+       예를 들어, 해당 속성의 값이 
+       <span class="code">0.006</span>
+       이면 서버에서 클라이언트로 메시지가 도착할때까지 걸리는 시간이 
+       평균적으로 0.006 초가 걸린다는 의미입니다.
+    </p>
+
+    <p style="padding-left:40px;">
+      이를 밀리 초(ms) 단위로 환산하면, 평균적으로 6 ms 가 걸린다는 의미가 됩니다.
+      사용자는 이 값을 사용하여 캐릭터 또는 발사체의 이동을 예측 및 보간할 필요가 없습니다.
+    </p>
+
+    <p style="padding-left:40px;">
+      이는 
+      <span class="code">NetworkManager</span>    
+      가 프레임 동기화(frame synchronization) 기법을 사용하기 때문입니다.
+      또한, 해당 속성 값은 단순 참고 용으로만 사용하는게 좋습니다. 
+    </p>
+
+
+    <p style="padding-left:40px;">
+       실제 메시지가 도착하는 시간은 이후 얼마든지 달라질 수 있지만,
+      <span class="code">NetworkManager</span>
+      는 최초로 측정한 이후 다시는 측정을 시도하지 않기 때문입니다.
+    </p>
+
+    <br>
+
+    <p style="padding-left:40px;">
+      <span class="code">NetworkManager.SendMessage()</span>
+      를 사용해서 직접 핑(Ping)을 체크하지 마십시오. 이 함수를 사용한
+      메시지 전송은 즉시 이루어지는 것이 아닌 것 뿐만 아니라,
+    </p>
+
+    <p style="padding-left:40px;">
+      수신 측이 도착한 메시지를 즉시 읽고 처리하는 것이 아니기 때문에
+      정확한 핑(Ping) 측정이 불가능하기 때문입니다. 받은 메시지 처리에
+      관해서
+    </p>
+
+    <p style="padding-left:40px;">
+        <a href="#property7">NetworkManager.onReadMessage</a>와
+        <a style="font-weight:bold; text-decoration: none;" href="#s2">Order of execution of event functions</a>
+        를 읽는 것을 추천합니다. 또한 메시지 전송에 관해서는
+    </p>
+
+    <p style="padding-left:40px;">
+        <a href="#method3">NetworkManager.SendMessage</a>
+        를 읽어보시길 바랍니다.
+        해당 속성은 
+       <span class="code">NetworkManager.status==SocketStatus.Connected</span>
+       일 때에만 유효합니다.
+    </p>
+
+    <br>
+    <h1 style="padding-left:60px; border-bottom:none">Property Value</h1>
+ 
+    <p style="padding-left:80px;">
+       <span class="code">NetworkManager</span>
+       서버와 클라이언트 최초 연결 시에, 측정된 핑(Ping)의 평균 값을 나타내는
+       <span class="code">double</span>
+    </p>
+
+    <h1 style="padding-left:60px; border-bottom:none">Exceptions</h1>
+    <table>
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              NullReferenceException
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                <span class="code">NetworkManager</span>
+                의 인스턴스가 초기화되지 않은 경우
+            </td>
+        </tr>
+    </table>
+    <h1 style="padding-left:60px; border-bottom:none">Example</h1>
+
+    <pre class="code" style="width:1250px; height:350px">
+    <code>
+    IEnumerator InitGame() {
+
+        while(NetworkManager.status != SocketStatus.Connected) {
+            yield return null;
+        }
+        UnityEngine.Debug.Log($"possible output: {NetworkManager.latency}"); // possible output: 0.016999
+        NetworkManager.onUpdate      = UpdateFn;
+        NetworkManager.onFixedUpdate = FixedUpdateFn;
+        NetworkManager.onReadMessage = MessageDecoder;
+    }
+    </code>
+    </pre>
+
+    
+
+    <br><br><br><br>
+    <h1 style="padding-left:30px" id="property7">NetworkManager.onUpdate</h1>
+    <table>
+        <tr>
+            <td style="padding-left:40px;">
+               <div>
+                  <span class="kw1">public static</span>
+                  <span class="kw2">UpdateFunction</span>
+                  onUpdate {
+                    <span class="kw1">get</span>; 
+                    <span class="kw1">set</span>;
+                  }
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p style="padding-left:40px;">
+       <span class="code">Update()</span>
+       단계에서 동기화되야할 콜백 함수들을 등록 및 해제합니다. 
+       <span class="code">NetworkManager</span>
+       는 서버와 클라이언트가 항상 똑같은 프레임 번호를 유지하도록 해줍니다.
+    </p>
+
+    <p style="padding-left:40px;">
+      이를 위해, 사용자는 동기화되야할 내용이 담긴 함수들을 
+      <span class="code">NetworkManager.onUpdate</span>
+      대리자(delegate)에 등록해야 합니다. 등록한 함수들은 
+      <span class="code">NetworkManager.Update()</span>
+      
+    </p>
+
+    <p style="padding-left:40px;">
+      단계에서 등록한 순서대로 차례대로 호출됩니다. 이 대리자의 호출(Invoke)은
+      항상 물리 시뮬레이션 이후에 이루어지며, 한 프레임에 한 번만 호출됩니다.
+      호출 주기는 컴퓨터
+    </p>
+
+    <p style="padding-left:40px;">
+        성능에 따라 달라질 수 있습니다. 또한,
+        <a href="#property4">NetworkManager.deltaTime</a>
+        을 읽어보시길 바랍니다.
+    </p>
+
+    <br>
+    <p style="padding-left:40px;">
+        위 대리자(delegate)에 
+        <span class="code">MonoBehaviour</span>의
+        서브클래스(Subclass)들의 
+        <span class="code">Update()</span>
+        함수를 등록하면 안된다는 점에 유의하시길 바랍니다.
+    </p>
+
+    <p style="padding-left:40px;">
+       이는 Unity가 각 이벤트 함수들(e.g. 
+       <span class="code">Update()</span>,
+       <span class="code">FixedUpdate()</span>)
+       의 단계들은 명시해놓았지만,
+       같은 단계에 있는 이벤트 함수들의 호출 순서를
+       명시해놓지 않았기 때문입니다.
+    </p>
+
+    <p style="padding-left:40px;">
+      예를 들어, 
+      <span class="code">MonoBehaviour</span>
+      의 서브 클래스(Subclass) A와 B 가 있다고 가정해봅시다.
+      이때, A 의 
+      <span class="code">Update()</span>가
+      B 의
+      <span class="code">Update()</span>보다 먼저 호출될지,
+      이후에 호출될지는
+    </p>
+
+    <p style="padding-left:40px;">
+      기본적으로 보장할 수 없습니다. 또한, 이 경우
+      <span class="code">NetworkManager.onUpdate</span>
+      에 등록했던 
+      <span class="code">Update()</span>
+      와, 
+      <span class="code">MonoBehaviour</span> 서브 클래스(Subclass)
+      의 
+      <span class="code">Update()</span>
+      까지 
+    </p>
+
+    <p style="padding-left:40px;">
+      총 두 번이나 호출되기 때문입니다. 일반적으로 이는 의도한 바가 아닐 가능성이 큽니다.
+      <span class="code">MonoBehaviour</span>
+      의 이벤트 함수들의 실행 순서에 대한 세부사항은
+    </p>
+
+    <p style="padding-left:40px;">
+        <a href="https://docs.unity3d.com/2023.2/Documentation/Manual/ExecutionOrder.html">
+            https://docs.unity3d.com/2023.2/Documentation/Manual/ExecutionOrder.html
+        </a>
+        를 참고하시길 바랍니다.
+    </p>
+    <br>
+    <p style="padding-left:40px;">
+        해당 속성은 thread-safe 하지 않습니다. 즉, 메인 스레드 이외의 스레드에서 이 함수를 호출하는 것은
+        <b>Undefined behaviour</b> 입니다. 
+    </p>
+    <br>
+
+    <h1 style="padding-left:60px; border-bottom:none">Property Value</h1>
+ 
+    <p style="padding-left:80px;">
+       <span class="code">delegate void UpdateFunction();</span>
+       의 함수 시그니쳐(Signature)를 가지고 있는 콜백 함수
+    </p>
+
+    <h1 style="padding-left:60px; border-bottom:none">Exceptions</h1>
+    <table>
+        <tr style=" font-size:20px">
+            <td  style="padding-left:80px;">
+              NullReferenceException
+            </td>
+            <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+            <td>
+                <span class="code">NetworkManager</span>
+                의 인스턴스가 초기화되지 않은 경우
+            </td>
+        </tr>
+    </table>
+    <h1 style="padding-left:60px; border-bottom:none">Example</h1>
+
+
+    <br><br><br><br>
+    <h1 style="padding-left:30px" id="property8">NetworkManager.onFixedUpdate</h1>
+    <table>
+        <tr>
+            <td style="padding-left:40px;">
+               <div>
+                  <span class="kw1">public static</span>
+                  <span class="kw2">UpdateFunction</span>
+                  onFixedUpdate {
+                    <span class="kw1">get</span>; 
+                    <span class="kw1">set</span>;
+                  }
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p style="padding-left:40px;">
+      <span class="code">FixedUpdate()</span>
+      단계에서 동기화되어야할 콜백함수들을 등록 및 해제합니다.
+      <span class="code">NetworkManager</span>
+       는 서버와 클라이언트가 항상 똑같은 프레임 번호를 유지하도록 해줍니다.
+    </p>
+
+    <p style="padding-left:40px;">
+        이를 위해, 사용자는 동기화되야할 내용이 담긴 함수들을 
+        <span class="code">NetworkManager.onFixedUpdate</span>
+        대리자(delegate)에 등록해야 합니다. 등록한 함수들은 
+        <span class="code">NetworkManager.Update()</span>
+    </p>
+
+    <p style="padding-left:40px;">
+       단계에서 호출됩니다. 이는 기존의 
+       <span class="code">FixedUpdate()</span>
+       함수가 
+       <span class="code">Update()</span>
+       와 달리 예측할 수 없는 타이밍에 호출되기 때문이며,
+       <span class="code">NetworkManager</span>
+       는 동기화를 위해 기존의
+    </p>
+
+    <p style="padding-left:40px;">
+       물리시뮬레이션을
+       <span class="code">Physics2D.SimulationMode = SimulationMode2D.Script</span>
+       로 중지시킨 후, 
+       <span class="code">NetworkManager.Update()</span>
+       단계에서 
+       <span class="code">Physics2D.Simulate()</span>
+    </p>
+
+    <p style="padding-left:40px;">
+      를 호출하여 직접 물리 시뮬레이션을 진행합니다. 이때, 
+      <span class="code">NetworkManager.onFixedUpdate</span>
+      의 호출(Invoke)은 물리 시뮬레이션 이전에 진행되며, 
+      등록한 순으로 
+    </p>
+
+    <p style="padding-left:40px;">
+      차례대로 호출됩니다.
+    </p>
+
+    <br>
+
+    <p style="padding-left:40px;">
+      또한, 
+      <span class="code">NetworkManager</span>
+      는 절대로 값이 변하지 않는
+      <span class="code">NetworkManager.fixedDeltaTime</span>
+      을 주기로 직접 물리 단계를 스케쥴링합니다. 
+      그렇기에 기존의 
+      <span class="code">FixedUpdate()</span>
+      처럼 
+    </p>
+
+    <p style="padding-left:40px;">
+      <span class="code">NetworkManager.onFixedUpdate</span>
+      -
+      <span class="code">Phyiscs2D.Simulate()</span>
+      라는 물리 단계는 한 프레임에서 0번 이상 호출될 수 있습니다. 물리와 같이,
+      컴퓨터 성능에 관계없이 변하지 않는 간격으로
+    </p>
+
+    <p style="padding-left:40px;">
+        실행되어야 하는 업데이트 함수들은, 이 대리자(delegate)에 등록하는 것을 추천합니다.
+        또한,
+        <a href="#property5">NetworkManager.fixedDeltaTime</a>
+        도 읽어보시길 바랍니다.
+    </p>
+
+    <br>
+    <p style="padding-left:40px;">
+        위 대리자(delegate)에 
+        <span class="code">MonoBehaviour</span>의
+        서브클래스(Subclass)들의 
+        <span class="code">FixedUpdate()</span>
+        함수를 등록하면 안된다는 점에 유의하시길 바랍니다.
+    </p>
+
+    <p style="padding-left:40px;">
+       이는 Unity가 각 이벤트 함수들(e.g. 
+       <span class="code">Update()</span>,
+       <span class="code">FixedUpdate()</span>)
+       의 단계들은 명시해놓았지만,
+       같은 단계에 있는 이벤트 함수들의 호출 순서를
+       명시해놓지 않았기 때문입니다.
+    </p>
+
+    <p style="padding-left:40px;">
+      예를 들어, 
+      <span class="code">MonoBehaviour</span>
+      의 서브 클래스(Subclass) A와 B 가 있다고 가정해봅시다.
+      이때, A 의 
+      <span class="code">FixedUpdate()</span>가
+      B 의
+      <span class="code">FixedUpdate()</span>보다 먼저 호출될지,
+      이후에 호출될지는
+    </p>
+
+    <p style="padding-left:40px;">
+      기본적으로 보장할 수 없습니다. 또한, 이 경우
+      <span class="code">NetworkManager.onFixedUpdate</span>
+      에 등록했던 
+      <span class="code">FixedUpdate()</span>
+      와, 
+      <span class="code">MonoBehaviour</span> 서브 클래스(Subclass)
+      의 
+      <span class="code">FixedUpdate()</span>
+      까지 
+    </p>
+
+    <p style="padding-left:40px;">
+      한 번 이상 호출될 수 있기 때문입니다. 일반적으로 이는 의도한 바가 아닐 가능성이 큽니다.
+      <span class="code">MonoBehaviour</span>
+      의 이벤트 함수들의 실행 순서에 대한 세부사항은
+    </p>
+
+    <p style="padding-left:40px;">
+        <a href="https://docs.unity3d.com/2023.2/Documentation/Manual/ExecutionOrder.html">
+            https://docs.unity3d.com/2023.2/Documentation/Manual/ExecutionOrder.html
+        </a>
+        를 참고하시길 바랍니다.
+    </p>
+    <br>
+    <p style="padding-left:40px;">
+        해당 속성은 thread-safe 하지 않습니다. 즉, 메인 스레드 이외의 스레드에서 이 함수를 호출하는 것은
+        <b>Undefined behaviour</b> 입니다. 
+    </p>
+
+     <br>
+
+    <h1 style="padding-left:60px; border-bottom:none">Property Value</h1>
+ 
+    <p style="padding-left:80px;">
+       <span class="code">delegate void UpdateFunction();</span>
+       의 함수 시그니쳐(Signature)를 가지고 있는 콜백 함수
+    </p>
+ 
+     <h1 style="padding-left:60px; border-bottom:none">Exceptions</h1>
+     <table>
+         <tr style=" font-size:20px">
+             <td  style="padding-left:80px;">
+               NullReferenceException
+             </td>
+             <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+             <td>
+                 <span class="code">NetworkManager</span>
+                 의 인스턴스가 초기화되지 않은 경우
+             </td>
+         </tr>
+     </table>
+     <h1 style="padding-left:60px; border-bottom:none">Example</h1>
+
+     <br><br><br><br>
+    <h1 style="padding-left:30px" id="property9">NetworkManager.onReadMessage</h1>
+    <table>
+        <tr>
+            <td style="padding-left:40px;">
+               <div>
+                  <span class="kw1">public static</span>
+                  <span class="kw2">MessageHandler</span>
+                  onReadMessage {
+                    <span class="kw1">get</span>; 
+                    <span class="kw1">set</span>;
+                  }
+               </div>
+            </td>
+        </tr>
+    </table>
+
+    <p style="padding-left:40px;">
+      송신자가 이전 프레임에서 보낸 메시지들을 처리하는 콜백 함수들을 등록 및 해제합니다.
+      송신자가 <span class="code">NetworkManager.SendMessage()</span>
+      메소드로 보낸 메시지들은
+    </p>
+
+    <p style="padding-left:40px;">
+      수신 측의 메시지 큐(MessageQueue)에 보낸 순서대로 보관되며, 
+      <span class="code">yield WaitForEndOfFrame</span> 
+      에서 <span class="code">EndOfFrame (E.O.F)</span>
+      라는 메시지를 보내는 것을 끝으로
+    </p>
+
+    <p style="padding-left:40px;">
+      그 프레임을 마무리 합니다.
+      <span class="code">NetworkManager</span>
+      는 <span class="code">NetworkManager.Update()</span>
+      에 진입 시, 
+      <span class="code">EndOfFrame</span>
+      메시지를 읽을 때까지 큐에서 메시지를 꺼내 읽으며,
+    </p>
+
+    <p style="padding-left:40px;">
+      <span class="code">onReadMessage</span>
+      는 이때 읽은 메시지 하나의 처리를 위해 호출되는 대리자(delegate)입니다.
+    </p>
+
+    <br>
+    <p style="padding-left:40px;">
+      불필요한 복사를 막기 위하여, 콜백함수로 전달되는 메시지는 
+      <span class="code">ReadOnlySpan&lt;byte&gt;</span>
+      타입의 읽기전용의 뷰입니다. 또한, 등록할 콜백함수가 인자의 타입을
+      알아서
+    </p>
+
+    <p style="padding-left:40px;">
+      추측할 수 있도록, 
+      <span class="code">(msg)=> { };</span>
+      와 같은 람다 식을 추천합니다.
+      사용자는 
+      <span class="code">msg[0]</span>
+      또는 
+      <span class="code">BitConverter.ToSingle(msg.Slice(1) )</span>
+      처럼 받은 메시지를
+    </p>
+
+    <p style="padding-left:40px;">
+        원하는 식으로 읽을 수 있습니다. 다만, 위에서 보여준
+        <span class="code">BitConverter.ToSingle()</span>
+        과 같은 함수를 사용하기 전에, 바이트 순서(Byte order)를 고려해야 합니다.
+    </p>
+
+    <p style="padding-left:40px;">
+       메세지를 보낼 때에는
+        <span class="code">NetworkManager.Host2Network()</span>
+       로 바이트 순서(Byte order)를 수정할 수 있었지만, 
+       <span class="code">ReadOnlySpan&lt;byte&gt;</span>
+       에는 적용할 수 없기 때문입니다.
+    </p>
+
+    <p style="padding-left:40px;">
+       <span class="code">NetworkManager</span>
+       는 이를 위해 
+       <a href="#method5">NetworkManager.Network2Host()</a>
+       메소드를 제공합니다. 또한, 
+       <a href="#method4">NetworkManager.Host2Network()</a>
+       도 읽어보시길 바랍니다.
+    </p>
+    
+    <br>
+    <p style="padding-left:40px;">
+        해당 속성은 thread-safe 하지 않습니다. 즉, 메인 스레드 이외의 스레드에서 이 함수를 호출하는 것은
+        <b>Undefined behaviour</b> 입니다. 
+    </p>
+
+    <br>
+    <h1 style="padding-left:60px; border-bottom:none">Property Value</h1>
+ 
+    <p style="padding-left:80px;">
+       <span class="code">delegate void MessageHandler(ReadOnlySpan&lt;byte&gt; msg);</span>
+       의 함수 시그니쳐(Signature)를 가지고 있는 콜백 함수
+    </p>
+ 
+     <h1 style="padding-left:60px; border-bottom:none">Exceptions</h1>
+     <table>
+         <tr style=" font-size:20px">
+             <td  style="padding-left:80px;">
+               NullReferenceException
+             </td>
+             <td>&nbsp;&nbsp; - &nbsp;&nbsp;</td>
+             <td>
+                 <span class="code">NetworkManager</span>
+                 의 인스턴스가 초기화되지 않은 경우
+             </td>
+         </tr>
+     </table>
+     <h1 style="padding-left:60px; border-bottom:none">Example</h1>
+
+    <pre class="code" style="height:1000px; width:1200px;">
+       <code>
+        
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using UnityEngine;
+    using UnityEngine.UI;
+    using UnityEngine.EventSystems;
+
+    public class Main : MonoBehaviour, IPointerClickHandler {
+
+        Text        inputField;
+        Text        output;
+        Image       hostBtn, connectBtn;
+        Rigidbody2D player1, player2;
+
+        Vector2 force1, force2;
+        byte[]  msgBuffer;
+
+
+        // Start() Method
+        private void Start() {
+            Application.runInBackground = true;
+            output     = transform.Find("Output").GetComponent&lt;Text&gt;(); 
+            inputField = transform.Find("InputField").Find("Text").GetComponent&lt;Text&gt;();
+            hostBtn    = transform.Find("Host").GetComponent&lt;Image&gt;();
+            connectBtn = transform.Find("Connect").GetComponent&lt;Image&gt;();
+            msgBuffer  = new byte[16];
+            force1     = Vector2.zero;
+            force2     = Vector2.zero;
+
+            NetworkManager.onUpdate = () => {
+                Vector2 force = new Vector2(
+                    Input.GetAxisRaw("Horizontal") * 25f * NetworkManager.deltaTime,
+                    Input.GetAxisRaw("Vertical")   * 25f * NetworkManager.deltaTime
+                );
+                force1 += force;
+
+                NetworkManager.Host2Network(BitConverter.GetBytes(force.x),0,4).CopyTo(msgBuffer,0);
+                NetworkManager.Host2Network(BitConverter.GetBytes(force.y),0,4).CopyTo(msgBuffer,4);
+                NetworkManager.SendMessage(msgBuffer, 0, 8);
+            };
+
+            NetworkManager.onFixedUpdate = () => {
+                player1.MovePosition(player1.position + force1);
+                player2.MovePosition(player2.position + force2);    
+                force1 *= 0.9f;
+                force2 *= 0.9f;
+            };
+
+            NetworkManager.onReadMessage = (msg) => {
+                NetworkManager.Network2Host(0,4);
+                NetworkManager.Network2Host(4,4);
+
+                force2 += new Vector2(
+                BitConverter.ToSingle(msg),
+                BitConverter.ToSingle(msg.Slice(4))
+                );
+            };
+        }
+
+
+        // OnPointerClick() Method
+        public void OnPointerClick(PointerEventData e) {
+            GameObject clicked = e.pointerCurrentRaycast.gameObject;
+
+            if(clicked.name == "Host") {
+
+                if(hostBtn.raycastTarget) {
+                    StartCoroutine(ClickEffect(hostBtn) );
+                }
+                if(NetworkManager.CreateServer()) {
+                    player1     = hostBtn.GetComponent&lt;Rigidbody2D&gt;();
+                    player2     = connectBtn.GetComponent&lt;Rigidbody2D&gt;();
+                    StartCoroutine(Loading() );
+                }
+            }
+
+            else if(clicked.name == "Connect") {
+            
+                if(connectBtn.raycastTarget) {
+                    StartCoroutine(ClickEffect(connectBtn) );
+                }
+                if (NetworkManager.CreateClient(inputField.text)) {
+                    player2 = hostBtn.GetComponent&lt;Rigidbody2D&lt;();
+                    player1 = connectBtn.GetComponent&lt;Rigidbody2D&lt;();
+                    StartCoroutine(Loading() );
+                }
+            }
+        }
+
+
+        // Loading() Coroutine
+        private IEnumerator Loading() {
+            String         opponent = NetworkManager.isServer ? "<strong>클라이언트</strong>" : "<strong>서버</strong>";
+            String         postfix  = String.Empty;
+            String         prefix   = NetworkManager.isServer ? NetworkManager.hostIP : String.Empty;
+            WaitForSeconds delay    = new WaitForSeconds(0.2f);
+
+
+            String[] reason = new String[] {
+                "<strong>연결이 종료되었습니다</strong>",
+                "<strong>방이 가득찼습니다</strong>",
+                "<strong>서버를 찾을 수 없었습니다</strong>",
+                "<strong>연결시간이 초과되었습니다</strong>",
+                $"{opponent}<strong>로부터 응답이 없습니다</strong>"
+            };
+
+            while(true) {
+                switch(NetworkManager.status) {
+                    case SocketStatus.NotConnected: {
+                        output.text = $"{prefix}\n{opponent}<strong>를 찾는 중입니다</strong>{postfix}";
+                        break;
+                    }
+                    case SocketStatus.Connecting: {
+                        output.text = $"{prefix}\n{opponent}<strong>를 찾았습니다!</strong>{postfix}";
+                        break;
+                    }
+                    case SocketStatus.Connected: {
+                        output.text = $"{prefix}\n{opponent}<strong>와 연결되었습니다</strong>";
+                        yield break;
+                    }
+                    case SocketStatus.Closed: {
+                        output.text = reason[(int) NetworkManager.exitCode];
+                        yield break;
+                    }
+                };
+
+                if(postfix.Length > 3) {
+                    postfix = String.Empty;
+                }
+                else {
+                    postfix += ".";
+                }
+                yield return delay;
+            }
+        }
+
+
+        // ClickEffect() Coroutine
+        private IEnumerator ClickEffect(Image btn) {
+            float totalSeconds = 0f;
+
+            btn.raycastTarget        = false;
+            btn.color                = new Color(0.8113208f, 0.8074938f, 0.8074938f);
+            btn.transform.localScale = new Vector3(0.8f, 0.8f, 1f);
+        
+            while((totalSeconds += Time.deltaTime) &lt; 0.1f) {
+                yield return null;
+            }
+
+            btn.raycastTarget        = true;
+            btn.color                = Color.white;
+            btn.transform.localScale = Vector3.one;
+        }
+    }
+
+       </code>
+    </pre>
+
+</body>
+</html>
