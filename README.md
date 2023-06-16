@@ -46,7 +46,6 @@ p2p 통신을 위해 서버 측은 먼저 `NetworkManager.CreateServer` 함수�
  NetworkManager.port = 12345; // optional
  
  if(NetworkManager.CreateClient("123.45.67.890")) {
-   UnityEngine.Debug.Log("wrong ip address!");
    StartCoroutine(Loading() );
  }
 ```
