@@ -105,13 +105,21 @@ p2p 통신을 위해 서버 측은 먼저 `NetworkManager.CreateServer` 함수�
      }
   }
 ```
-서버와 클라이언트를 생성했다고 해서, 연결이 바로 완료된 것은 아닙니다. 내부적으로 핑(ping) 체크 등의 과정이 이루어지고 있기
+서버와 클라이언트를 생성했다고 해서, 연결이 바로 완료된 것은 아닙니다. 
 
-때문입니다. 그렇기에 사용자는 `NetworkManager.status` 속성을 사용하여, 연결이 완료되었는지 종료되었는지를 확인해야 합니다.
+내부적으로 핑(ping) 체크 등의 과정이 이루어지고 있기 때문입니다. 
 
-`NetworkManager.status == SocketStatus.Connected` 가 되면, 연결이 완료되었다는 의미입니다. 연결이 완료되면, 동기화되야할
+그렇기에 사용자는 `NetworkManager.status` 속성을 사용하여, 
 
-내용들을 `NetworkManager.onUpdate`, `NetworkManager.onFixedUpdate`, `NetworkManager.onReadMessage` 에 등록합니다.
+연결이 완료되었는지 종료되었는지를 확인해야 합니다.
+
+`NetworkManager.status == SocketStatus.Connected` 가 되면, 
+
+연결이 완료되었다는 의미입니다. 연결이 완료되면, 동기화되야할
+
+내용들을 `NetworkManager.onUpdate`, `NetworkManager.onFixedUpdate`, 
+
+`NetworkManager.onReadMessage` 에 등록합니다.
 
 <br><br>
 
@@ -168,44 +176,60 @@ byte[] msgBuffer;
     };
  }
 ```
-`Update()`, `FixedUpdate()` 단계에서 동기화가 되야할 내용들을 `NetworkManager.onUpdate`, `NetworkManager.onFixedUpdate`
+`Update()`, `FixedUpdate()` 단계에서 동기화가 되야할 내용들을 
 
-에 등록합니다. `NetworkManager.onUpdate` 에서 키 입력을 받고, 자신이 조종하는 캐릭터에게 힘을 가해줍니다. 또한, 상대 측도
+`NetworkManager.onUpdate`, `NetworkManager.onFixedUpdate`
 
-이 상태를 반영할 수 있도록, `NetworkManager.SendMessage` 함수를 사용하여 벡터 `force` 를 보내줍니다. 이때, 보낼 값들은
+에 등록합니다. `NetworkManager.onUpdate` 에서 키 입력을 받고, 
 
-모두 `byte[]` 형태로 인코딩되어야 합니다. 이를 위해 `System.BitConverter` 의 함수들을 사용하는 것을 추천합니다.
+자신이 조종하는 캐릭터에게 힘을 가해줍니다. 또한, 상대 측도 이 상태를 반영할 수 있도록, 
+
+`NetworkManager.SendMessage` 함수를 사용하여 벡터 `force` 를 보내줍니다.
+
+이때, 보낼 값들은 모두 `byte[]` 형태로 인코딩되어야 합니다. 
+
+이를 위해 `System.BitConverter` 의 함수들을 사용하는 것을 추천합니다.
 
 <br>
 <br>
 
-받은 메시지는 `NetworkManager.onReadMessage` 에 등록한 콜백함수를 통해 읽어들일 수 있습니다. 위 코드에서는
+받은 메시지는 `NetworkManager.onReadMessage` 에 등록한 콜백함수를 통해 읽어들일 수 있습니다.
 
-`byte[]` 로 인코딩된 `force` 를 다시 `Vector2` 타입으로 읽어들여, 상대방의 캐릭터에 힘을 가해줍니다.
+위 코드에서는 `byte[]` 로 인코딩된 `force` 를 다시 `Vector2` 타입으로 읽어들여, 
+
+상대방의 캐릭터에 힘을 가해줍니다.
 <br>
 <br>
 ## 5. 마무리
-위의 코드에서 서버와 클라이언트 측이 난수(random number)를 사용한다고 하면, 맨 처음에 연결이 되었을 때
+위의 코드에서 서버와 클라이언트 측이 난수(random number)를 사용한다고 하면,
 
-한번만 서버 측에서 난수 생성기를 초기화하기 위해 쓰일 시드(seed)값을 클라이언트 측으로 보내줍니다.
+맨 처음에 연결이 되었을 때 한번만 서버 측에서 난수 생성기를 초기화하기 위해 쓰일
 
-유니티의 `Random.InitState(int seed)` 를 통해 항상 똑같은 난수를 얻을 수 있습니다.
+시드(seed)값을 클라이언트 측으로 보내줍니다.유니티의 `Random.InitState(int seed)` 
+
+를 통해 항상 똑같은 난수를 얻을 수 있습니다.
 
 <br>
 
-시간 측정은 `NetworkManager.deltaTime` 를 통해 해줄 수 있습니다. 해당 속성은 기존의 `Time.deltaTime` 과 
+시간 측정은 `NetworkManager.deltaTime` 를 통해 해줄 수 있습니다. 
 
-다르게, 그 값이 절대 변하지 않기 때문에  서버 측과 클라이언트 측 모두 동일한 결과를 얻을 수 있기 때문입니다.
+해당 속성은 기존의 `Time.deltaTime` 과 다르게, 그 값이 절대 변하지 않기 때문에  
 
-다만, 이것은 너무 단순합니다. 실제로는 부동소수점 오차 또는 결정론적이지 못한 유니티의 물리 시뮬레이션으로
+서버 측과 클라이언트 측 모두 동일한 결과를 얻을 수 있기 때문입니다.
 
-인하여 동기화가 어긋날 수 있기 때문입니다. 즉, 서버가 동기화가 어긋나지 않도록 이를 보정하는 로직이
+<br>
+
+다만, 이것은 너무 단순합니다. 실제로는 부동소수점 오차 또는 결정론적이지 못한 
+
+유니티의 물리 시뮬레이션으로 인하여 동기화가 어긋날 수 있기 때문입니다. 
+
+즉, 서버가 동기화가 어긋나지 않도록 이를 보정하는 로직이
 
 필요할 수 있습니다. 일반적으로 서버가 시뮬레이션한 결과를 클라이언트 측으로 보내주거나, 
 
-일정 주기마다 서버가 클라이언트의 상태를 바로잡아주는 방법을 생각할 수 있습니다. 자세한 건,
+일정 주기마다 서버가 클라이언트의 상태를 바로잡아주는 방법을 생각할 수 있습니다. 
 
-`NetworkManager.html` 문서를 참고하시길 바랍니다.
+자세한 건, `NetworkManager.html` 문서를 참고하시길 바랍니다.
 
 
 
