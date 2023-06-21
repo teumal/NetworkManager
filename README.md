@@ -127,8 +127,8 @@ byte[] msgBuffer;
       player2 = Find("ClientPlayer").GetComponent<Rigidbody2D>();
     }
     else {
-      player1 = Find("ServerPlayer").GetComponent<Rigidbody2D>();
-      player2 = Find("ClientPlayer").GetComponent<Rigidbody2D>();
+      player1 = Find("ClientPlayer").GetComponent<Rigidbody2D>();
+      player2 = Find("ServerPlayer").GetComponent<Rigidbody2D>();
     }
  
     // Update() 에 해당
