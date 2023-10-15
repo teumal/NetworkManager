@@ -1,5 +1,8 @@
+#define USE_PHYSICS2D // when your project is for 3D, comment this line
 
 using System;
+using System.Text;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -22,6 +25,11 @@ public enum SocketExitCode {
     NoResponse
 };
 
+public enum Simulator {
+    Both,
+    Server
+};
+
 public class NetworkManager : MonoBehaviour {
 
     public delegate void MessageHandler(ReadOnlySpan<byte> msg);
@@ -36,7 +44,10 @@ public class NetworkManager : MonoBehaviour {
         SyncFrameRate,   
         SetBreakpoint,
         EndOfFrame,     
-        CustomMessage    
+        CustomMessage,
+        Physics,
+        OnUpdate,
+        Simulator
     };
 
 
@@ -46,11 +57,19 @@ public class NetworkManager : MonoBehaviour {
 
     private static NetworkManager Inst = null; // the singleton instance
 
-    private int            mPort     = 11111;               // port number
-    private String         mHostIP   = null;                // a `String` object which shows the host IP
-    private bool           mIsServer = false;               // checks if the socket created is for server
-    private SocketStatus   mStatus   = SocketStatus.Closed; // the current status of `this`
-    private SocketExitCode mExitCode = SocketExitCode.None; // a reason why the socket is closed
+    #if DEVELOPMENT_BUILD //{
+       private StringBuilder mLog = new StringBuilder(100000); // log string
+    //}
+    #endif
+
+    private bool           mServerSimulation = false;           // checks if the simulation result is reliable
+    private int            mCurrentFrame = 0;                   // current frame number
+    private Simulator      mSimulator    = Simulator.Both;      // simulatorType
+    private int            mPort         = 11111;               // port number
+    private String         mHostIP       = null;                // a `String` object which shows the host IP
+    private bool           mIsServer     = false;               // checks if the socket created is for server
+    private SocketStatus   mStatus       = SocketStatus.Closed; // the current status of `this`
+    private SocketExitCode mExitCode     = SocketExitCode.None; // a reason why the socket is closed
 
     private MessageHandler mOnReadMessage = null;  // the delegate which is called on the step,`onReadMessage`
     private UpdateFunction mOnUpdate      = null;  // the delegate which is called on the step,`onUpdate`
@@ -112,6 +131,7 @@ public class NetworkManager : MonoBehaviour {
     private void OnApplicationQuit() {
         if (Inst != null) {
             Close();
+
             mServerThread?.Join();
             mSocketThread?.Join();
             mPingThread?.Join();
@@ -126,24 +146,58 @@ public class NetworkManager : MonoBehaviour {
             if(mStatus != SocketStatus.Connected) {
                 ReadMessage();
 
-                if(mStatus != SocketStatus.Connected) return;
+                #if DEVELOPMENT_BUILD //{
+                   Log($"#ProductName: {Application.productName}\n#Date: {DateTime.Now}\n#deltaTime: {Inst.mDeltaTime}\n#fixedDeltaTime: {Inst.mFixedDeltaTime}\n#latency: {latency}\n\n");
+                //}
+                #endif
+
+
+                if (mStatus != SocketStatus.Connected) return;
             }
 
+            #if DEVELOPMENT_BUILD // {
+                  Log($"-----------------------------\nframe {mCurrentFrame})");
+            // }
+            #endif
+
             lock (lk2) {
-                if (mEnterUpdate == 0) { 
+                if (mEnterUpdate == 0) { // Step 0) EnterUpdate
                     Monitor.Wait(lk2);
                 }
                 mEnterUpdate--;
                 mEnterFixedUpdate += mDeltaTime;
             }
-            ReadMessage();
+            ReadMessage(); // Step 1) ReadMessage_First
+
+
+            // if simulator == Server, then the client can't the next steps directly..
+            if(mSimulator == Simulator.Server && mIsServer == false) {
+                ReadMessage(); // Step 1-2) ReadMessage_Second (read up to `onUpdate` message)
+                return;
+            }
 
             while (mEnterFixedUpdate >= mFixedDeltaTime) {
                 mEnterFixedUpdate -= mFixedDeltaTime;
-                mOnFixedUpdate?.Invoke();
-                Physics2D.Simulate(mFixedDeltaTime);
+                mOnFixedUpdate?.Invoke();            // Step 2) onFixedUpdate
+
+                if (mSimulator == Simulator.Server) {
+                    SystemMessage.Physics();
+                }
+
+                #if USE_PHYSICS2D //{
+                   Physics2D.Simulate(mFixedDeltaTime); // Step 3) Simulate
+                //}
+                #else //{
+                   Physics.Simulate(mFixedDeltaTime); // Step 3) Simulate
+                //}
+                #endif
             }
-            mOnUpdate?.Invoke();
+
+            if (mSimulator == Simulator.Server) {
+                SystemMessage.OnUpdate();
+            }
+
+            mOnUpdate?.Invoke(); // Step 4) onUpdate
         }
         catch (SocketException e) {
             UnityEngine.Debug.Log($"Update() throws {e}");
@@ -190,8 +244,10 @@ public class NetworkManager : MonoBehaviour {
 
         while (true) {
             try {
+
                 if (mStatus == SocketStatus.Connected) {
                     SystemMessage.EndOfFrame();
+                    mCurrentFrame++;
                     FlushSendBuffer();
                 }
             }
@@ -360,6 +416,29 @@ public class NetworkManager : MonoBehaviour {
                 msgLength = length + 3;
                 break;
             }
+
+
+            // Physics message
+            case MessageType.Physics: {
+                break;
+            }
+
+
+            // onUpdate message
+            case MessageType.OnUpdate: {
+                break;
+            }
+
+
+            // Simulator
+            case MessageType.Simulator: {
+
+                lock(lk1) {
+                    Monitor.Pulse(lk1); // pulse to `PingThread`
+                    msgLength = 2;
+                }
+                break;
+            }
         };
         return msgLength;
     }
@@ -458,6 +537,39 @@ public class NetworkManager : MonoBehaviour {
                 }
                 break;
             }
+
+            // Physics message
+            case MessageType.Physics: {
+                onFixedUpdate?.Invoke(); // Step 1-1) onFixedUpdate
+
+                mServerSimulation = false;
+
+                #if USE_PHYSICS2D //{
+                   Physics2D.Simulate(mFixedDeltaTime); // Step 1-2) Simulate
+                //}
+                #else //{
+                   Physics.Simulate(mFixedDeltaTime); // Step 1-2) Simulate
+                //}
+                #endif
+
+                mServerSimulation = true;
+                break;
+            }
+
+
+            // OnUpdate message
+            case MessageType.OnUpdate: {
+                onUpdate?.Invoke();
+                break;
+            }
+
+
+            // Simulator message
+            case MessageType.Simulator: {
+                Simulator value = (Simulator) mMsgQueue[startIndex+1];
+                mSimulator = value;
+                break;
+            }
         };
         return msgLength;
     }
@@ -484,8 +596,6 @@ public class NetworkManager : MonoBehaviour {
         mListener.Send(mSendBuffer, mSendBufferSz, SocketFlags.None);
         mSendBufferSz = 0;
     }
-
-
 
 
     // ServerCode() Method
@@ -567,12 +677,15 @@ public class NetworkManager : MonoBehaviour {
     // PingCode() Method
     private void PingCode() {
         try {
+
             lock (lk1) {
+                SystemMessage.Simulator();
 
                 for (int i = 0; i < 20; ++i) {
                     SystemMessage.Ping();
                 }
                 mAvgLatency *= 0.05; // divide by 20
+
                 SystemMessage.ClientFrameRate();
                 SystemMessage.ServerFrameRate();
             }
@@ -660,6 +773,15 @@ public class NetworkManager : MonoBehaviour {
         }
     }
 
+    
+    // ShortToBytes() Method
+    private static unsafe byte[] ShortToBytes(short value, byte[] msgBuffer, int startIndex) {
+        byte* ptr = (byte*) &value;
+
+        msgBuffer[startIndex]   = ptr[0];
+        msgBuffer[startIndex+1] = ptr[1];
+        return msgBuffer;
+    }
 
 
     ////////////////////////
@@ -705,15 +827,23 @@ public class NetworkManager : MonoBehaviour {
             Inst.mQueueOffset      = 0;
             Inst.mEnterUpdate      = 1;  // unlike CreateClient(), this method increases mEnterUpdate by 1
             Inst.mEnterFixedUpdate = 0f;
+            Inst.mServerSimulation = true;
 
-            Inst.mHostIP   = localIP.ToString();
-            Inst.mExitCode = SocketExitCode.None;
-            Inst.mIsServer = true;
-            Inst.mStatus   = SocketStatus.NotConnected;
+            Inst.mHostIP       = localIP.ToString();
+            Inst.mExitCode     = SocketExitCode.None;
+            Inst.mIsServer     = true;
+            Inst.mStatus       = SocketStatus.NotConnected;
+            Inst.mCurrentFrame = 0;
 
             Inst.mServerThread              = new Thread(Inst.ServerCode);
             Inst.mServerThread.IsBackground = true;
             Inst.mServerThread.Start();
+
+            #if DEVELOPMENT_BUILD //{
+               File.WriteAllText("./ServerLog.txt", "");
+            //}
+            #endif
+
             return true;
         }
         catch (Exception e) {
@@ -729,7 +859,7 @@ public class NetworkManager : MonoBehaviour {
 
 
     // CreateClient() Method
-    public static bool CreateClient(String hostIP) {
+    public static bool CreateClient(string hostIP) {
 
         if (Inst == null || Inst.mStatus != SocketStatus.Closed) {
             return false;
@@ -758,14 +888,21 @@ public class NetworkManager : MonoBehaviour {
             Inst.mEnterUpdate          = 0; 
             Inst.mEnterFixedUpdate     = 0f;
 
-            Inst.mHostIP   = hostIP;
-            Inst.mExitCode = SocketExitCode.None;
-            Inst.mIsServer = false;
-            Inst.mStatus   = SocketStatus.NotConnected;
+            Inst.mHostIP       = hostIP;
+            Inst.mExitCode     = SocketExitCode.None;
+            Inst.mIsServer     = false;
+            Inst.mStatus       = SocketStatus.NotConnected;
+            Inst.mCurrentFrame = 0;
 
             Inst.mSocketThread              = new Thread(Inst.ClientCode);
             Inst.mSocketThread.IsBackground = true;
             Inst.mSocketThread.Start();
+
+            #if DEVELOPMENT_BUILD //{
+               File.WriteAllText("./ClientLog.txt", $"");
+            //}
+            #endif
+
             return true;
         }
         catch (Exception e) {
@@ -801,6 +938,17 @@ public class NetworkManager : MonoBehaviour {
                 Monitor.Pulse(Inst.lk1);
             }
             lock (Inst.lk2) {
+
+                #if DEVELOPMENT_BUILD //{
+
+                    if (Inst.mLog.Length > 0) {
+                       string path = isServer ? "./ServerLog.txt" : "./ClientLog.txt";
+                       File.AppendAllText(path, Inst.mLog.ToString());
+                       Inst.mLog.Clear();
+                    }   
+                //}
+                #endif
+
                 Inst.mEnterUpdate = 4;
                 Monitor.Pulse(Inst.lk2);
             }
@@ -823,7 +971,10 @@ public class NetworkManager : MonoBehaviour {
         }
 
         sendBuffer[bufferSize] = (byte) MessageType.CustomMessage;
-        Host2Network(BitConverter.GetBytes(msgLength), 0, 2).CopyTo(sendBuffer, bufferSize + 1);
+        // Host2Network(BitConverter.GetBytes(msgLength), 0, 2).CopyTo(sendBuffer, bufferSize + 1);
+        Host2Network(
+            ShortToBytes(msgLength, sendBuffer, bufferSize+1), bufferSize+1, 2
+        );
         Buffer.BlockCopy(msg, startIndex, sendBuffer, bufferSize + 3, msgLength);
         Inst.mSendBufferSz += msgLength + 3;
     }
@@ -847,11 +998,37 @@ public class NetworkManager : MonoBehaviour {
     }
 
 
+    // Log() Method
+    public static void Log(string message) {
+
+        #if DEVELOPMENT_BUILD // {
+
+           if(Inst.mStatus != SocketStatus.Connected) {
+              return;
+           }
+
+           int logLength = Inst.mLog.Length;
+           int msgLength = message.Length;
+           int capacity  = Inst.mLog.Capacity;
+
+           if(logLength + msgLength >= capacity) {
+              string path = isServer ? "./ServerLog.txt" : "./ClientLog.txt";
+              File.AppendAllText(path, Inst.mLog.ToString());
+              File.AppendAllText(path, message);
+              Inst.mLog.Clear();
+              return;
+           }
+           
+           Inst.mLog.AppendLine(message);
+        // }
+        #endif
+    }
+
 
     ///////////////////////
     // Getter And Setter //
     ///////////////////////
-    
+
     // port getter/setter
     public static int port {
         get { return Inst.mPort;  }
@@ -860,7 +1037,7 @@ public class NetworkManager : MonoBehaviour {
 
 
     // hostIP getter
-    public static String hostIP {
+    public static string hostIP {
         get { return Inst.mHostIP; }
     }
 
@@ -898,6 +1075,30 @@ public class NetworkManager : MonoBehaviour {
     // latency getter
     public static double latency {
         get { return Inst.mAvgLatency; }
+    }
+
+
+    // currentFrame getter
+    public static int currentFrame {
+        get { return Inst.mCurrentFrame; }
+    }
+
+
+    // simulator getter and setter
+    public static Simulator simulator {
+        get { return Inst.mSimulator;}
+        set {
+            
+            if(Inst.mStatus == SocketStatus.Closed) {
+                Inst.mSimulator = value;
+            }
+        }
+    }
+
+
+    // serverSimulation getter
+    public static bool serverSimulation {
+        get { return Inst.mServerSimulation; }
     }
 
 
@@ -964,12 +1165,12 @@ public class NetworkManager : MonoBehaviour {
             msgBuffer[11] = (byte)MessageType.SetBreakpoint;
             msgBuffer[12] = (byte)MessageType.SetBreakpoint;
 
-            if (toClient) {
-                Inst.mListener.Send(msgBuffer, 8, 5, SocketFlags.None); // client's mEnterUpdate will be increased by 1
-            }
+            if(toClient == false) {
+                Inst.EnqueueMessage(msgBuffer, 8, 5); // server's mEnterUpdate is already 1, so the server enter to the first frame immediately
+            }                                                         
             else {
-                Inst.EnqueueMessage(msgBuffer, 8, 5); // server's mEnterUpdate is already 1.
-            }
+                Inst.mListener.Send(msgBuffer, 8, 5, SocketFlags.None); // client's mEnterUpdate is zero before the server send `E.O.F` message.
+            }                                                          
         }
 
 
@@ -1054,6 +1255,34 @@ public class NetworkManager : MonoBehaviour {
                 Inst.FlushSendBuffer();
             }
             Inst.mSendBuffer[Inst.mSendBufferSz++] = (byte) MessageType.EndOfFrame;
+        }
+
+
+        // Simulator() Method (used in PingThread)
+        public static void Simulator() {
+            msgBuffer[8] = (byte) MessageType.Simulator;
+            msgBuffer[9] = (byte) Inst.mSimulator;
+            Inst.mListener.Send(msgBuffer, 8, 2, SocketFlags.None);
+        }
+
+
+        // Physics() Method (used in MainThread)
+        public static void Physics() {
+            if (Inst.mSendBufferSz > 1023) {
+                Inst.FlushSendBuffer();
+            }
+            Inst.mSendBuffer[Inst.mSendBufferSz++] = (byte)MessageType.Physics;
+        }
+
+
+        // OnUpdate() Method (used in MainThread)
+        public static void OnUpdate() {
+            if (Inst.mSendBufferSz > 1022) {
+                Inst.FlushSendBuffer();
+            }
+            Inst.mSendBuffer[Inst.mSendBufferSz]   = (byte)MessageType.OnUpdate;
+            Inst.mSendBuffer[Inst.mSendBufferSz+1] = (byte)MessageType.SetBreakpoint;
+            Inst.mSendBufferSz += 2;
         }
     };
 };
