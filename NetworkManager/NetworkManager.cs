@@ -775,13 +775,13 @@ public class NetworkManager : MonoBehaviour {
 
     
     // ShortToBytes() Method
-    private static unsafe byte[] ShortToBytes(short value, byte[] msgBuffer, int startIndex) {
-        byte* ptr = (byte*) &value;
-
-        msgBuffer[startIndex]   = ptr[0];
-        msgBuffer[startIndex+1] = ptr[1];
-        return msgBuffer;
-    }
+    //private static unsafe byte[] ShortToBytes(short value, byte[] msgBuffer, int startIndex) {
+    //    byte* ptr = (byte*) &value;
+    //
+    //    msgBuffer[startIndex]   = ptr[0];
+    //    msgBuffer[startIndex+1] = ptr[1];
+    //    return msgBuffer;
+    //}
 
 
     ////////////////////////
@@ -971,10 +971,10 @@ public class NetworkManager : MonoBehaviour {
         }
 
         sendBuffer[bufferSize] = (byte) MessageType.CustomMessage;
-        // Host2Network(BitConverter.GetBytes(msgLength), 0, 2).CopyTo(sendBuffer, bufferSize + 1);
-        Host2Network(
-            ShortToBytes(msgLength, sendBuffer, bufferSize+1), bufferSize+1, 2
-        );
+        Host2Network(BitConverter.GetBytes(msgLength), 0, 2).CopyTo(sendBuffer, bufferSize + 1);
+        //Host2Network(
+        //    ShortToBytes(msgLength, sendBuffer, bufferSize+1), bufferSize+1, 2
+        //);
         Buffer.BlockCopy(msg, startIndex, sendBuffer, bufferSize + 3, msgLength);
         Inst.mSendBufferSz += msgLength + 3;
     }
