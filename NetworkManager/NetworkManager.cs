@@ -47,7 +47,7 @@ public class NetworkManager : MonoBehaviour {
         CustomMessage,
         Physics,
         OnUpdate,
-        Simulator
+        Simulator,
     };
 
 
@@ -117,8 +117,17 @@ public class NetworkManager : MonoBehaviour {
             Inst = this;
             lk1  = Inst;
             lk2  = mRecvBuffer;
-            Physics2D.simulationMode = SimulationMode2D.Script;
-            Inst.mFixedDeltaTime     = Time.fixedDeltaTime;
+
+
+            #if USE_PHYSICS2D //{
+               Physics2D.simulationMode = SimulationMode2D.Script;
+            //}
+            #else //{
+               Physics.simulationMode = SimulationMode.Script;
+            //}
+            #endif
+
+            Inst.mFixedDeltaTime = Time.fixedDeltaTime;
             DontDestroyOnLoad(gameObject);
             StartCoroutine(EndOfFrame());
             return;
@@ -129,12 +138,28 @@ public class NetworkManager : MonoBehaviour {
 
     // OnApplicationQuit() Method
     private void OnApplicationQuit() {
-        if (Inst != null) {
+        if (Inst == this) {
             Close();
-
+            
             mServerThread?.Join();
             mSocketThread?.Join();
             mPingThread?.Join();
+
+            Inst = null;
+        }
+    }
+
+
+    // OnDestroy() Method
+    private void OnDestroy() {
+        if(Inst == this) {
+            Close();
+            
+            mServerThread?.Join();
+            mSocketThread?.Join();
+            mPingThread?.Join();
+
+            Inst = null;
         }
     }
 
@@ -150,7 +175,6 @@ public class NetworkManager : MonoBehaviour {
                    Log($"#ProductName: {Application.productName}\n#Date: {DateTime.Now}\n#deltaTime: {Inst.mDeltaTime}\n#fixedDeltaTime: {Inst.mFixedDeltaTime}\n#latency: {latency}\n\n");
                 //}
                 #endif
-
 
                 if (mStatus != SocketStatus.Connected) return;
             }
@@ -200,7 +224,7 @@ public class NetworkManager : MonoBehaviour {
             mOnUpdate?.Invoke(); // Step 4) onUpdate
         }
         catch (SocketException e) {
-            UnityEngine.Debug.Log($"Update() throws {e}");
+            UnityEngine.Debug.Log($"[NetworkManager] Update() throws {e}");
 
             if (e.SocketErrorCode == SocketError.TimedOut) {
                 mExitCode = SocketExitCode.NoResponse;
@@ -208,7 +232,7 @@ public class NetworkManager : MonoBehaviour {
             }
         }
         catch (Exception e) {
-            UnityEngine.Debug.Log($"Update() throws {e}");
+            UnityEngine.Debug.Log($"[NetworkManager] Update() throws {e}");
         }
     }
 
@@ -252,7 +276,7 @@ public class NetworkManager : MonoBehaviour {
                 }
             }
             catch (Exception e) {
-                UnityEngine.Debug.Log($"EndOfFrame() throws {e}");
+                UnityEngine.Debug.Log($"[NetworkManager] EndOfFrame() throws {e}");
             }
             yield return ret;
         }
@@ -430,7 +454,7 @@ public class NetworkManager : MonoBehaviour {
             }
 
 
-            // Simulator
+            // Simulator message
             case MessageType.Simulator: {
 
                 lock(lk1) {
@@ -604,7 +628,8 @@ public class NetworkManager : MonoBehaviour {
 
         try {
             mListener                  = mServer.Accept(); // accept first client
-            mListener.SendTimeout      = 10000;
+            mListener.SendTimeout      = 10000;            // for `SocketExitCode.NoResponse`
+            mListener.ReceiveTimeout   = 10000;            // for `SocketExitCode.NoResponse`
             mSocketThread              = new Thread(ServerCode2);
             mSocketThread.IsBackground = true;
             mSocketThread.Start();
@@ -619,7 +644,7 @@ public class NetworkManager : MonoBehaviour {
                     client.Receive(mRecvBuffer); // expected to return zero..
                 }
                 catch (Exception e) {
-                    UnityEngine.Debug.Log($"ServerCode() throws {e}");
+                    UnityEngine.Debug.Log($"[NetworkManager] ServerCode() throws {e}");
                 }
                 finally {
                     client.Close();
@@ -627,13 +652,13 @@ public class NetworkManager : MonoBehaviour {
             }
         }
         catch (Exception e) {
-            UnityEngine.Debug.Log($"ServerCode() throws {e}");
+            UnityEngine.Debug.Log($"[NetworkManager] ServerCode() throws {e}");
         }
         finally {
             client?.Close();
             mServer.Close();
             Close();
-            UnityEngine.Debug.Log("ServerCode is returned");
+            UnityEngine.Debug.Log("[NetworkManager] ServerCode is returned");
         }
     }
 
@@ -657,19 +682,19 @@ public class NetworkManager : MonoBehaviour {
             }
         }
         catch (SocketException e) {
-            UnityEngine.Debug.Log($"ServerCode2() throws {e}");
+            UnityEngine.Debug.Log($"[NetworkManager] ServerCode2() throws {e}");
 
             if (e.SocketErrorCode == SocketError.TimedOut) {
                 mExitCode = SocketExitCode.NoResponse;
             }
         }
         catch (Exception e) {
-            UnityEngine.Debug.Log($"ServerCode2() throws {e}");
+            UnityEngine.Debug.Log($"[NetworkManager] ServerCode2() throws {e}");
         }
         finally {
             mListener.Close();
             mServer.Close();
-            UnityEngine.Debug.Log($"ServerCode2 is returned");
+            UnityEngine.Debug.Log($"[NetworkManager] ServerCode2 is returned");
         }
     }
 
@@ -701,19 +726,21 @@ public class NetworkManager : MonoBehaviour {
 
             SystemMessage.Connected(false);
             SystemMessage.Connected(true);
+
+
         }
         catch (SocketException e) {
-            UnityEngine.Debug.Log($"PingCode() throws {e}");
+            UnityEngine.Debug.Log($"[NetworkManager] PingCode() throws {e}");
 
             if (e.SocketErrorCode == SocketError.TimedOut) {
                 mExitCode = SocketExitCode.NoResponse;
             }
         }
         catch (Exception e) {
-            UnityEngine.Debug.Log($"PingCode() throws {e}");
+            UnityEngine.Debug.Log($"[NetworkManager] PingCode() throws {e}");
         }
         finally {
-            UnityEngine.Debug.Log("PingCode is returned");
+            UnityEngine.Debug.Log("[NetworkManager] PingCode is returned");
         }
     }
 
@@ -737,7 +764,7 @@ public class NetworkManager : MonoBehaviour {
                 SystemMessage.Connecting(); // set `mStatus` from `NotConnected` to `Connecting`
             }
             catch (Exception e) {
-                UnityEngine.Debug.Log($"ClientCode() throws {e}");
+                UnityEngine.Debug.Log($"[NetworkManager] ClientCode() throws {e}");
 
                 if (mExitCode == SocketExitCode.None) {
                     mExitCode = SocketExitCode.Denied;
@@ -757,31 +784,31 @@ public class NetworkManager : MonoBehaviour {
             }
         }
         catch (SocketException e) {
-            UnityEngine.Debug.Log($"ClientCode() throws {e}");
+            UnityEngine.Debug.Log($"[NetworkManager] ClientCode() throws {e}");
 
             if (e.SocketErrorCode == SocketError.TimedOut) {
                 mExitCode = SocketExitCode.NoResponse;
             }
         }
         catch (Exception e) {
-            UnityEngine.Debug.Log($"ClientCode() throws {e}");
+            UnityEngine.Debug.Log($"[NetworkManager] ClientCode() throws {e}");
         }
         finally {
             mListener.Close();
             Close();
-            UnityEngine.Debug.Log("ClientCode is returned");
+            UnityEngine.Debug.Log("[NetworkManager] ClientCode is returned");
         }
     }
 
     
     // ShortToBytes() Method
-    //private static unsafe byte[] ShortToBytes(short value, byte[] msgBuffer, int startIndex) {
-    //    byte* ptr = (byte*) &value;
-    //
-    //    msgBuffer[startIndex]   = ptr[0];
-    //    msgBuffer[startIndex+1] = ptr[1];
-    //    return msgBuffer;
-    //}
+    private static unsafe byte[] ShortToBytes(short value, byte[] msgBuffer, int startIndex) {
+        byte* ptr = (byte*) &value;
+
+        msgBuffer[startIndex]   = ptr[0];
+        msgBuffer[startIndex+1] = ptr[1];
+        return msgBuffer;
+    }
 
 
     ////////////////////////
@@ -827,7 +854,7 @@ public class NetworkManager : MonoBehaviour {
             Inst.mQueueOffset      = 0;
             Inst.mEnterUpdate      = 1;  // unlike CreateClient(), this method increases mEnterUpdate by 1
             Inst.mEnterFixedUpdate = 0f;
-            Inst.mServerSimulation = true;
+            Inst.mServerSimulation = true; // always `true`
 
             Inst.mHostIP       = localIP.ToString();
             Inst.mExitCode     = SocketExitCode.None;
@@ -847,7 +874,7 @@ public class NetworkManager : MonoBehaviour {
             return true;
         }
         catch (Exception e) {
-            UnityEngine.Debug.Log($"CreateServer() throws {e}");
+            UnityEngine.Debug.Log($"[NetworkManager] CreateServer() throws {e}");
 
             if (Inst.mServer != null) {
                 Inst.mServer.Close();   // close the socket,`mServer`
@@ -878,15 +905,17 @@ public class NetworkManager : MonoBehaviour {
               ProtocolType.Tcp
             );
 
-            Inst.mListener.SendTimeout = 10000; // the `Socket.Send()` have to be returned in 10 seconds, 
-            Inst.msgBegin              = 0;     // otherwise throws the exception
-            Inst.msgEnd                = 0;
-            Inst.mRecvBufferSz         = 0;
-            Inst.mSendBufferSz         = 0;
-            Inst.mQueueSz              = 0;
-            Inst.mQueueOffset          = 0;
-            Inst.mEnterUpdate          = 0; 
-            Inst.mEnterFixedUpdate     = 0f;
+            Inst.mListener.ReceiveTimeout = 10000; // for `SocketExitCode.NoResponse`
+            Inst.mListener.SendTimeout    = 10000; // for `SocketExitCode.NoResponse`
+            Inst.msgBegin                 = 0;     
+            Inst.msgEnd                   = 0;
+            Inst.mRecvBufferSz            = 0;
+            Inst.mSendBufferSz            = 0;
+            Inst.mQueueSz                 = 0;
+            Inst.mQueueOffset             = 0;
+            Inst.mEnterUpdate             = 0; 
+            Inst.mEnterFixedUpdate        = 0f;
+            Inst.mServerSimulation        = false; // when `simulator == Both`, the value is always `false`.
 
             Inst.mHostIP       = hostIP;
             Inst.mExitCode     = SocketExitCode.None;
@@ -899,14 +928,14 @@ public class NetworkManager : MonoBehaviour {
             Inst.mSocketThread.Start();
 
             #if DEVELOPMENT_BUILD //{
-               File.WriteAllText("./ClientLog.txt", $"");
+               File.WriteAllText("./ClientLog.txt", "");
             //}
             #endif
 
             return true;
         }
         catch (Exception e) {
-            UnityEngine.Debug.Log($"CreateClient() throws {e}");
+            UnityEngine.Debug.Log($"[NetworkManager] CreateClient() throws {e}");
 
             if (Inst.mListener != null) {
                 Inst.mListener.Close();   // close the socket,`mListener`
@@ -927,7 +956,7 @@ public class NetworkManager : MonoBehaviour {
             if(Inst.mServer   != null && Inst.mServer.Connected)   Inst.mServer.Shutdown(SocketShutdown.Both);
         }
         catch (Exception e) {
-            UnityEngine.Debug.Log($"Close() throws {e}");
+            UnityEngine.Debug.Log($"[NetworkManager] Close() throws {e}");
         }
         finally {
             Inst.mListener?.Close();
@@ -971,10 +1000,10 @@ public class NetworkManager : MonoBehaviour {
         }
 
         sendBuffer[bufferSize] = (byte) MessageType.CustomMessage;
-        Host2Network(BitConverter.GetBytes(msgLength), 0, 2).CopyTo(sendBuffer, bufferSize + 1);
-        //Host2Network(
-        //    ShortToBytes(msgLength, sendBuffer, bufferSize+1), bufferSize+1, 2
-        //);
+        // Host2Network(BitConverter.GetBytes(msgLength), 0, 2).CopyTo(sendBuffer, bufferSize + 1);
+        Host2Network(
+            ShortToBytes(msgLength, sendBuffer, bufferSize+1), bufferSize+1, 2
+        );
         Buffer.BlockCopy(msg, startIndex, sendBuffer, bufferSize + 3, msgLength);
         Inst.mSendBufferSz += msgLength + 3;
     }
@@ -1130,9 +1159,9 @@ public class NetworkManager : MonoBehaviour {
     private class SystemMessage {
 
         //  +0                +3                 +8               +21              +32
-        // -+------------------+------------------+----------------+----------------+-
+        // -+------------------+------------------+----------------+----------------+
         //  | for ServerThread | for SocketThread | for PingThread | for MainThread |
-        // -+------------------+------------------+----------------+----------------+-
+        // -+------------------+------------------+----------------+----------------+
         //                                  msgBuffer
 
         private static byte[] msgBuffer = new byte[32];
