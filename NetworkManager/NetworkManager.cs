@@ -224,15 +224,19 @@ public class NetworkManager : MonoBehaviour {
             mOnUpdate?.Invoke(); // Step 4) onUpdate
         }
         catch (SocketException e) {
-            UnityEngine.Debug.Log($"[NetworkManager] Update() throws {e}");
-
+            string message = $"[NetworkManager] Update() throws {e}";
+            UnityEngine.Debug.Log(message);
+            Log(message);
+            
             if (e.SocketErrorCode == SocketError.TimedOut) {
                 mExitCode = SocketExitCode.NoResponse;
                 Close();
             }
         }
         catch (Exception e) {
-            UnityEngine.Debug.Log($"[NetworkManager] Update() throws {e}");
+            string message = $"[NetworkManager] Update() throws {e}";
+            UnityEngine.Debug.Log(message);
+            Log(message);
         }
     }
 
