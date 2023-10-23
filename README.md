@@ -61,10 +61,10 @@ p2p 통신을 위해 서버 측은 먼저 `NetworkManager.CreateServer` 함수�
 ``` c#
   // Loading() Coroutine
   private IEnumerator Loading() {
-     String         opponent = NetworkManager.isServer ? "클라이언트" : "서버";
-     String         postfix  = String.Empty;
-     String         prefix   = NetworkManager.isServer ? NetworkManager.hostIP : String.Empty;
-     WaitForSeconds delay    = new WaitForSeconds(0.2f);
+     String opponent = NetworkManager.isServer ? "클라이언트" : "서버";
+     String postfix  = String.Empty;
+     String prefix   = NetworkManager.isServer ? NetworkManager.hostIP : String.Empty;
+     float  delay    = 0f;
 
      String[] reason = new String[] {
         "연결이 종료되었습니다",
@@ -95,13 +95,11 @@ p2p 통신을 위해 서버 측은 먼저 `NetworkManager.CreateServer` 함수�
               }
          };
 
-         if(postfix.Length > 3) {
-            postfix = String.Empty;
+         if((delay += Time.deltaTime) > 0.2f) {
+             postfix = (postfix.Length > 3) ? (string.Empty) : (postfix + ".");
+             delay -= 0.2f;
          }
-         else {
-            postfix += ".";
-         }
-         yield return delay;
+         yield return null;
      }
   }
 ```
@@ -120,6 +118,14 @@ p2p 통신을 위해 서버 측은 먼저 `NetworkManager.CreateServer` 함수�
 내용들을 `NetworkManager.onUpdate`, `NetworkManager.onFixedUpdate`, 
 
 `NetworkManager.onReadMessage` 에 등록합니다.
+
+일반적으로 해당 과정은 `NetworkManager.status` 의 값을 체크하는
+
+코루틴(Coroutine)을 생성하는 것으로 처리하는 것을 추천합니다.
+
+다만, 이때 코루틴의 `YieldInstruction` 은 항상 `yield return null` 을 사용하는 것을 권장합니다.
+
+이는 코루틴이 서버와 클라이언트 측 모두 정확하게 "첫 번째" 프레임을 관찰할 수 있어야 하기 때문입니다.
 
 <br><br>
 
