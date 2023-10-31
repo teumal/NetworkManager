@@ -995,9 +995,9 @@ public class NetworkManager : MonoBehaviour {
             return;
         }
 
-        byte[] sendBuffer = Inst.mSendBuffer;
-        int bufferSize    = Inst.mSendBufferSz;
-        short msgLength   = (short) Mathf.Clamp(length, 0, 1021);
+        byte[] sendBuffer  = Inst.mSendBuffer;
+        ref int bufferSize = ref Inst.mSendBufferSz;
+        short msgLength    = (short) Mathf.Clamp(length, 0, 1021);
 
         if ((bufferSize + msgLength) > 1021) {
             Inst.FlushSendBuffer();
